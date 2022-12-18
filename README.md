@@ -1,4 +1,5 @@
 
+![Crescite Logo](./img/Crescite%20logo_transparent%20GOLD%20BROWN_cropped.png)
 # Crescite Token
 
 This is the repository for the [Crescite](https://crescite.org/) Token.
