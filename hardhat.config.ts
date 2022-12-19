@@ -53,7 +53,7 @@ task("deploy", "Deploys the contract", async (taskArgs, hre) => {
 
 task("total-supply", "Prints out the total supply of the token", async (taskArgs, hre) => {
   const crescite = await bindToCrescite(hre);
-  console.log(getTotalSupply(crescite, hre));
+  console.log(await getTotalSupply(crescite, hre));
 })
 
 task("mint", "Mint tokens")
