@@ -4,6 +4,23 @@
 
 This is the repository for the [Crescite](https://crescite.org/) Token.
 
+# Design 
+
+The Crescite token uses industry standard, audited base contracts from [Open Zeppelin](https://www.openzeppelin.com/). The token contract supports the following set of base interfaces: 
+
+* [Role-based](https://docs.openzeppelin.com/contracts/4.x/access-control#granting-and-revoking) [AccessControl](https://docs.openzeppelin.com/contracts/4.x/api/access)
+* [ERC20](https://docs.openzeppelin.com/contracts/4.x/erc20)
+* [Mintable](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20-_mint-address-uint256-)
+* [Burnable](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20-_burn-address-uint256-)
+* [Pausable](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20Pausable)
+* [Snapshot](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20Snapshot)
+* [Permit](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20Permit)
+* [Flash Minting](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20FlashMint)
+
+# License
+
+Crescite is published under the [Apache v2.0](./LICENSE.md) license. 
+
 ## Local Dev Setup
 
 In the local directory of this project setup `.env` file with the following content:
@@ -31,7 +48,7 @@ Set the `TOKEN_CONTRACT` environment variable either in the `.env` file:
 TOKENB_CONTRACT=[token contract address]
 ```
 
-or within your shell:
+or within your shell / CLI:
 
 ```
 export TOKEN_CONTRQACT=[token contract address]
@@ -76,10 +93,13 @@ hh [GLOBAL OPTIONS] deploy
 > ```
 >
 
+### Verifying Contracts
+
+There are a number of bugs that remain in the XDC Explorer when dealing with contracts that use base libraries like Open Zeppelin. 
 ### Print Config 
 
 ```
-Usage: hardhat [GLOBAL OPTIONS] print-config
+Usage: hh [GLOBAL OPTIONS] print-config
 
 print-config: Prints the config
 ```
@@ -87,7 +107,7 @@ print-config: Prints the config
 ### Total Supply 
 
 ```
-Usage: hardhat [GLOBAL OPTIONS] total-supply
+Usage: hh [GLOBAL OPTIONS] total-supply
 
 total-supply: Prints out the total supply of the token
 ```
@@ -95,7 +115,7 @@ total-supply: Prints out the total supply of the token
 ### Mint
 
 ```
-Usage: hardhat [GLOBAL OPTIONS] mint --account <STRING> --amount <STRING>
+Usage: hh [GLOBAL OPTIONS] mint --account <STRING> --amount <STRING>
 
 OPTIONS:
 
@@ -108,7 +128,7 @@ mint: Mint tokens
 ### Has Role
 
 ```
-Usage: hardhat [GLOBAL OPTIONS] has-role --account <STRING> --role <STRING>
+Usage: hh [GLOBAL OPTIONS] has-role --account <STRING> --role <STRING>
 
 OPTIONS:
 
@@ -121,7 +141,7 @@ has-role: Determine if an acount has a role
 ### Grant Role
 
 ```
-Usage: hardhat [GLOBAL OPTIONS] grant-role --account <STRING> --role <STRING>
+Usage: hh [GLOBAL OPTIONS] grant-role --account <STRING> --role <STRING>
 
 OPTIONS:
 
@@ -134,7 +154,7 @@ grant-role: Add an account to a role
 ### Revoke Roke
 
 ```
-Usage: hardhat [GLOBAL OPTIONS] revoke-role --account <STRING> --role <STRING>
+Usage: hh [GLOBAL OPTIONS] revoke-role --account <STRING> --role <STRING>
 
 OPTIONS:
 

@@ -111,7 +111,7 @@ task("revoke-role", "Remove an account from a role")
 
 // -- Utility functions
 
-async function bindToCrescite(hre: HardhatRuntimeEnvironment): Promise<import("/Users/fuzz/dev/lab577/crescite-token/typechain-types/index").Crescite> {
+async function bindToCrescite(hre: HardhatRuntimeEnvironment): Promise<Crescite> {
   const CresciteFactory = await hre.ethers.getContractFactory("Crescite");
   const crescite = CresciteFactory.attach(TOKEN_CONTRACT);
   return crescite;
