@@ -76,14 +76,37 @@ task("has-role", "Determine if an acount has a role")
 .setAction(async ({role, account}, hre) => {
   const crescite = await bindToCrescite(hre);
   const address = xdcAddressToEth(account);
-  const roleBinary = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('MINTER_ROLE'));
-  console.log(roleBinary);
+  const roleBinary = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes(role));
   const hasRole = await crescite.hasRole(roleBinary, address);
   if (hasRole) {
     console.log(`account ${account} has the role ${role}`);
   } else {
     console.log(`account ${account} does not have the role ${role}`);
   }
+});
+
+task("grant-role", "Add an account to a role")
+.addParam("account", "XDC account")
+.addParam("role", "one of the supported roles: DEFAULT_ADMIN_ROLE, SNAPSHOT_ROLE, PAUSER_ROLE, MINTER_ROLE")
+.setAction(async ({role, account}, hre) => {
+  const crescite = await bindToCrescite(hre);
+  const address = xdcAddressToEth(account);
+  const roleBinary = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes(role));
+  const grantRoletx = await crescite.grantRole(roleBinary, address);
+  await grantRoletx.wait();
+  console.log(`Role ${role} granted to ${account}`);
+});
+
+task("revoke-role", "Remove an account from a role")
+.addParam("account", "XDC account")
+.addParam("role", "one of the supported roles: DEFAULT_ADMIN_ROLE, SNAPSHOT_ROLE, PAUSER_ROLE, MINTER_ROLE")
+.setAction(async ({role, account}, hre) => {
+  const crescite = await bindToCrescite(hre);
+  const address = xdcAddressToEth(account);
+  const roleBinary = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes(role));
+  const grantRoletx = await crescite.revokeRole(roleBinary, address);
+  await grantRoletx.wait();
+  console.log(`Role ${role} has been revoked from account ${account}`);
 });
 
 // -- Utility functions

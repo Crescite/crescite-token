@@ -92,6 +92,18 @@ Usage: hardhat [GLOBAL OPTIONS] total-supply
 total-supply: Prints out the total supply of the token
 ```
 
+### Mint
+
+```
+Usage: hardhat [GLOBAL OPTIONS] mint --account <STRING> --amount <STRING>
+
+OPTIONS:
+
+  --account     the address of the account in 0x... form 
+  --amount      the amount of tokens being minted to the address 
+
+mint: Mint tokens
+```
 
 ### Has Role
 
@@ -106,16 +118,30 @@ OPTIONS:
 has-role: Determine if an acount has a role
 ```
 
-### Mint
+### Grant Role
 
 ```
-Usage: hardhat [GLOBAL OPTIONS] mint --account <STRING> --amount <STRING>
+Usage: hardhat [GLOBAL OPTIONS] grant-role --account <STRING> --role <STRING>
 
 OPTIONS:
 
-  --account     the address of the account in 0x... form 
-  --amount      the amount of tokens being minted to the address 
+  --account     XDC account  
+  --role        one of the supported roles: DEFAULT_ADMIN_ROLE, SNAPSHOT_ROLE, PAUSER_ROLE, MINTER_ROLE 
 
-mint: Mint tokens
+grant-role: Add an account to a role
 ```
+
+### Revoke Roke
+
+```
+Usage: hardhat [GLOBAL OPTIONS] revoke-role --account <STRING> --role <STRING>
+
+OPTIONS:
+
+  --account     XDC account 
+  --role        one of the supported roles: DEFAULT_ADMIN_ROLE, SNAPSHOT_ROLE, PAUSER_ROLE, MINTER_ROLE 
+
+revoke-role: Remove an account from a role
+```
+
 
