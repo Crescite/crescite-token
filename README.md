@@ -151,7 +151,7 @@ OPTIONS:
 grant-role: Add an account to a role
 ```
 
-### Revoke Roke
+### Revoke Role
 
 ```
 Usage: hh [GLOBAL OPTIONS] revoke-role --account <STRING> --role <STRING>
