@@ -2,7 +2,8 @@
 ![Crescite Logo](./img/Crescite%20logo_transparent%20GOLD%20BROWN_cropped.png)
 # Crescite Token
 
-This is the repository for the [Crescite](https://crescite.org/) Token.
+This is the repository for the [Crescite](https://crescite.org/) Token. 
+Token Tracker: [xdcb5fa33923ec3ff7f4b9ab7b4c20b236d31243f77](https://explorer.xinfin.network/tokens/xdcb5fa33923ec3ff7f4b9ab7b4c20b236d31243f77)
 
 # Design 
 
@@ -112,6 +113,18 @@ Usage: hh [GLOBAL OPTIONS] total-supply
 total-supply: Prints out the total supply of the token
 ```
 
+### Balance
+
+```
+Usage: hardhat [GLOBAL OPTIONS] balance --account <STRING>
+
+OPTIONS:
+
+  --account     the address of the account 
+
+balance: Get balance of account
+```
+
 ### Mint
 
 ```
@@ -119,10 +132,22 @@ Usage: hh [GLOBAL OPTIONS] mint --account <STRING> --amount <STRING>
 
 OPTIONS:
 
-  --account     the address of the account in 0x... form 
+  --account     the address of the account 
   --amount      the amount of tokens being minted to the address 
 
 mint: Mint tokens
+```
+
+### Burn 
+
+```
+Usage: hardhat [GLOBAL OPTIONS] burn --amount <STRING>
+
+OPTIONS:
+
+  --amount      the amount of tokens in the issuing account that will be burnt 
+
+burn: Burn tokens in the issuing account
 ```
 
 ### Has Role

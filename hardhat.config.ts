@@ -53,21 +53,47 @@ task("deploy", "Deploys the contract", async (taskArgs, hre) => {
 
 task("total-supply", "Prints out the total supply of the token", async (taskArgs, hre) => {
   const crescite = await bindToCrescite(hre);
-  console.log(await getTotalSupply(crescite, hre));
+  console.log(formatNumberString(await getTotalSupply(crescite, hre)));
 })
 
+task("balance", "Get balance of account")
+.addParam("account", "the address of the account")
+.setAction(async ({account}, hre) => {
+  const crescite = await bindToCrescite(hre);
+  const balance = await getBalance(account, crescite, hre);
+  console.log(formatNumberString(balance));
+});
+
 task("mint", "Mint tokens")
-.addParam("account", "the address of the account in 0x... form")
+.addParam("account", "the address of the account")
 .addParam("amount", "the amount of tokens being minted to the address")
 .setAction(async ({account, amount}, hre) => {
   const crescite = await bindToCrescite(hre);
-  console.log(`Minting ${amount} tokens to account ${account}`);
+  console.log(`Minting ${formatNumberString(amount)} tokens to account ${account}`);
   const amountWei = hre.ethers.utils.parseEther(amount);
-  console.log("total supply before minting: ", await getTotalSupply(crescite, hre));
+  console.log("total supply before minting: ", formatNumberString(await getTotalSupply(crescite, hre)));
+  console.log("balance of account before minting: ", formatNumberString(await getBalance(account, crescite, hre)));
   const tx = await crescite.mint(xdcAddressToEth(account), amountWei);
   const receipt = await tx.wait();
   console.log('gas used:', formatEther(receipt.gasUsed, hre));
-  console.log("total supply after minting: ", await getTotalSupply(crescite, hre));
+  console.log("total supply after minting: ", formatNumberString(await getTotalSupply(crescite, hre)));
+  console.log("balance of account after minting: ", formatNumberString(await getBalance(account, crescite, hre)));
+});
+
+task("burn", "Burn tokens in the issuing account")
+.addParam("amount", "the amount of tokens in the issuing account that will be burnt")
+.setAction(async ({amount}, hre) => {
+  const crescite = await bindToCrescite(hre);
+  const account = ethAddressToXdc(await (await hre.ethers.getSigners())[0].getAddress());
+  console.log(`Burning ${formatNumberString(amount)} tokens from issuing account ${account}`);
+  const amountWei = hre.ethers.utils.parseEther(amount);
+  console.log("total supply before burning: ", formatNumberString(await getTotalSupply(crescite, hre)));
+  console.log("balance of account before burning: ", formatNumberString(await getBalance(account, crescite, hre)));
+  const tx = await crescite.burn(amountWei);
+  const receipt = await tx.wait();
+  console.log('gas used:', formatEther(receipt.gasUsed, hre));
+  console.log("total supply after minting: ", formatNumberString(await getTotalSupply(crescite, hre)));
+  console.log("balance of account after minting: ", formatNumberString(await getBalance(account, crescite, hre)));
 });
 
 task("has-role", "Determine if an acount has a role")
@@ -111,15 +137,24 @@ task("revoke-role", "Remove an account from a role")
 
 // -- Utility functions
 
+function formatNumberString(numberAsString: string): string {
+  return parseFloat(numberAsString).toLocaleString();
+}
+
 async function bindToCrescite(hre: HardhatRuntimeEnvironment): Promise<Crescite> {
   const CresciteFactory = await hre.ethers.getContractFactory("Crescite");
-  const crescite = CresciteFactory.attach(TOKEN_CONTRACT);
+  const crescite = CresciteFactory.attach(xdcAddressToEth(TOKEN_CONTRACT));
   return crescite;
 }
 
 async function getTotalSupply(crescite: Crescite, hre: HardhatRuntimeEnvironment): Promise<string> {
   const totalSupply = await crescite.totalSupply()
   return formatEther(totalSupply, hre);
+}
+
+async function getBalance(account: string, crescite: Crescite, hre: HardhatRuntimeEnvironment): Promise<string> {
+  const balance = await crescite.balanceOf(xdcAddressToEth(account));
+  return formatEther(balance, hre);
 }
 
 function formatEther(amount: BigNumberish, hre: HardhatRuntimeEnvironment): string {
