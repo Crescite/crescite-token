@@ -3,12 +3,13 @@ pragma solidity ^0.8.17;
 
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "hardhat/console.sol";
 import "./Crescite.sol";
 import "./lib/ds-math/math.sol";
 
-contract Staking is DSMath, Context, ReentrancyGuard, Ownable {
+contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
   Crescite public token;
 
   struct StakingPosition {
@@ -21,21 +22,21 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable {
   uint256 public START_DATE;
   uint256 public END_DATE;
 
-  uint256 private APR = 12;
+  uint256 private APR;
   uint256 private constant PRECISION = 1e18;
   uint256 private constant SECONDS_IN_YEAR = 365 days;
-  bool private IS_PAUSED = false;
 
-  uint256 public constant YEAR_1_LIMIT = 500_000_000 * PRECISION;
-  uint256 public constant YEAR_2_LIMIT = 1_500_000_000 * PRECISION;
-  uint256 public constant YEARLY_LIMIT = 3_000_000_000 * PRECISION;
-
+  uint256 private constant YEAR_1_LIMIT = 500_000_000 * PRECISION;
+  uint256 private constant YEAR_2_LIMIT = 1_500_000_000 * PRECISION;
+  uint256 private constant YEARLY_LIMIT = 3_000_000_000 * PRECISION;
 
   mapping(address => StakingPosition[]) public stakingPositions;
   mapping(address => uint256) public userStakingTotals;
+  mapping(address => uint256) public userRewardsClaimed;
 
   event Staked(address indexed user, uint256 amount);
   event Unstaked(address indexed user, uint256 amount, uint256 rewards);
+  event ClaimRewards(address indexed user, uint256 rewards);
 
   constructor(address tokenAddress, uint256 apr) {
     START_DATE = block.timestamp;
@@ -52,10 +53,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable {
    * @dev The user must have enough tokens to stake
    * @dev A user can stake multiple times, each time will create a new staking position
    */
-  function stakeTokens(uint256 amount) external nonReentrant {
-//    console.log('Staking:', add(totalStaked, amount), getStakeLimit());
-
-    require(IS_PAUSED == false, "Staking is paused");
+  function stakeTokens(uint256 amount) external nonReentrant whenNotPaused {
     require(amount > 0, "Amount must be greater than zero");
     require(token.balanceOf(_msgSender()) >= amount, "Insufficient token balance");
     require(add(totalStaked, amount) <= getStakeLimit(), "Staking pool limit reached");
@@ -87,12 +85,133 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable {
    * @dev Rewards are calculated based on the elapsed time for each staking position held by the user
    * @dev Rewards are calculated based on the APR and the amount staked
    */
-  function unstakeTokens() external nonReentrant {
-    require(IS_PAUSED == false, "Unstaking is paused");
-    require(stakingPositions[_msgSender()].length > 0, "No staking positions");
+  function unstakeTokens() external nonReentrant whenNotPaused {
+    require(stakingPositions[_msgSender()].length > 0, "Unstake: No staking positions");
 
     address user = _msgSender();
     uint256 amountStaked = userStakingTotals[user];
+    uint256 rewards = getUserRewards(user);
+    uint256 amountToTransfer = add(amountStaked, rewards);
+
+    // Ensure the contract has a sufficient balance to pay
+    require(token.balanceOf(address(this)) >= amountToTransfer, "Insufficient balance to unstake and claim");
+
+    // Subtract amount from the user's staked total
+    userStakingTotals[user] = sub(userStakingTotals[user], amountStaked);
+
+    // Subtract user's stake from the grand total
+    totalStaked = sub(totalStaked, amountStaked);
+
+    // decrement the number of stakers
+    numberOfStakers = sub(numberOfStakers, 1);
+
+    // Remove user's staking entry
+    delete stakingPositions[user];
+
+    // Remove record of user's rewards claims
+    delete userRewardsClaimed[user];
+
+    // Transfer staked tokens from staking contract back to user
+    // only *after* zeroing their staked balance to help minimise attack vector
+    // @see https://consensys.io/diligence/blog/2019/09/stop-using-soliditys-transfer-now/
+    token.transfer(user, amountToTransfer);
+
+    emit Unstaked(user, amountStaked, rewards);
+  }
+
+  /**
+   * Calculate the user's total rewards to date and transfer them to user
+   * Keep a record of the rewards they have claimed
+   */
+  function claimRewards() external nonReentrant whenNotPaused {
+    address user = _msgSender();
+
+    require(stakingPositions[user].length > 0, 'Claim rewards: No staking positions');
+
+    // calculate user's rewards at this time
+    uint256 rewards = getUserRewards(user);
+
+    // Ensure the contract has a sufficient balance to pay rewards
+    require(token.balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
+
+    // update the amount user has claimed
+    userRewardsClaimed[user] = add(userRewardsClaimed[user], rewards);
+
+    // transfer the rewards to the user
+    token.transfer(user, rewards);
+
+    emit ClaimRewards(user, rewards);
+  }
+
+  /**
+   * Calling this function sets a flag which will prevent
+   * staking/unstaking calls
+   */
+  function pause() external onlyOwner whenNotPaused {
+    _pause();
+  }
+
+  /**
+   * Calling this function sets a flag which will prevent
+   * staking/unstaking calls
+   */
+  function resume() external onlyOwner whenPaused {
+    _unpause();
+  }
+
+  /**
+   * EXTERNAL VIEWS
+   */
+
+  /**
+   * @notice Get the total amount of tokens staked
+   */
+  function viewUserStakingRewards(address user) external view returns (uint256) {
+    if (stakingPositions[user].length == 0) {
+      return 0;
+    }
+
+    return getUserRewards(user);
+  }
+
+  /**
+   * @notice The rewards per second a user is receiving across all their staking positions
+   */
+  function viewUserRewardsPerSecond(address user) external view returns (uint256) {
+    if (stakingPositions[user].length == 0) {
+      return 0;
+    }
+
+    uint256 rewardsPerYear = wmul(userStakingTotals[user], wdiv(mul(APR, PRECISION), mul(100, PRECISION)));
+    uint256 rewardsPerSecond = wdiv(rewardsPerYear, mul(SECONDS_IN_YEAR, PRECISION));
+
+    return rewardsPerSecond;
+  }
+
+  /**
+   * @notice Return the contract APR
+   */
+  function viewApr() external view returns (uint256) {
+    return APR;
+  }
+
+  /**
+   * @notice Return the stake limit according to the current block time
+   */
+  function viewStakeLimit() external view returns (uint256) {
+    return getStakeLimit();
+  }
+
+  /**
+   * INTERNAL FUNCTIONS
+   */
+
+  /**
+   * Calculate the users rewards.
+   * - Calculate from all staking positions
+   * - Subtract amount of rewards already claimed
+   */
+  function getUserRewards(address user) internal view returns (uint256) {
     uint256 rewards = 0;
 
     // Calculate the total rewards from the user's staking staking positions
@@ -104,24 +223,8 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable {
       rewards = add(rewards, calculatePositionRewards(amount, timestamp));
     }
 
-    // Remove user's staking entry
-    delete stakingPositions[user];
-
-    // Subtract amount from the user's staked total
-    userStakingTotals[user] = sub(userStakingTotals[user], amountStaked);
-
-    // Subtract user's stake from the grand total
-    totalStaked = sub(totalStaked, amountStaked);
-
-    // decrement the number of stakers
-    numberOfStakers = sub(numberOfStakers, 1);
-
-    // Transfer staked tokens from staking contract back to user
-    // only *after* zeroing their staked balance to help minimise attack vector
-    // @see https://consensys.io/diligence/blog/2019/09/stop-using-soliditys-transfer-now/
-    token.transfer(user, add(amountStaked, rewards));
-
-    emit Unstaked(user, amountStaked, rewards);
+    // subtract the amount of claimed rewards from the total earned
+    return sub(rewards, userRewardsClaimed[user]);
   }
 
   /**
@@ -143,52 +246,8 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable {
     // Calculate the rewards based on the elapsed time and rewards per second
     uint256 reward = wmul(rewardsPerSecond, wmul(elapsedSeconds, PRECISION));
 
-//    console.log('[Staking] positionAmount', positionAmount);
-//    console.log('[Staking] rewardsPerYear', rewardsPerYear);
-//    console.log('[Staking] rewardsPerSecond', rewardsPerSecond);
-//    console.log('[Staking] elapsedSeconds', elapsedSeconds);
-//    console.log('[Staking] rewards in wei', reward);
-
     // Return the calculated rewards
     return reward;
-  }
-
-  /**
-   *
-   */
-  function viewUserStakingRewards(address user) external view returns (uint256) {
-    require(stakingPositions[user].length > 0, "No staking positions");
-
-    uint256 rewards = 0;
-
-    for (uint256 i = 0; i < stakingPositions[user].length; i++) {
-      uint256 amount = stakingPositions[user][i].amount;
-      uint256 timestamp = stakingPositions[user][i].timestamp;
-
-      rewards = add(rewards, calculatePositionRewards(amount, timestamp));
-    }
-
-    return rewards;
-  }
-
-  /**
-   *
-   */
-  function viewUserRewardsPerSecond(address user) external view returns (uint256) {
-    require(userStakingTotals[user] > 0, "No staking positions");
-
-    uint256 rewardsPerYear = wmul(userStakingTotals[user], wdiv(mul(APR, PRECISION), mul(100, PRECISION)));
-    uint256 rewardsPerSecond = wdiv(rewardsPerYear, mul(SECONDS_IN_YEAR, PRECISION));
-
-    return rewardsPerSecond;
-  }
-
-  function viewApr() external view returns (uint256) {
-    return APR;
-  }
-
-  function viewStakeLimit() external view returns (uint256) {
-    return getStakeLimit();
   }
 
   /**
@@ -231,26 +290,6 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable {
     // Assuming 1 year is 31536000 seconds, add 1 to start the year count from 1.
     uint256 currentYear = add(1, (elapsedTime / SECONDS_IN_YEAR));
     return currentYear;
-  }
-
-  /**
-   * Calling this function sets a flag which will prevent
-   * staking/unstaking calls
-   */
-  function pause() external onlyOwner {
-    require(IS_PAUSED == false, "Contract is already paused");
-
-    IS_PAUSED = true;
-  }
-
-  /**
-   * Calling this function sets a flag which will prevent
-   * staking/unstaking calls
-   */
-  function resume() external onlyOwner {
-    require(IS_PAUSED == true, "Contract is not paused");
-
-    IS_PAUSED = false;
   }
 }
 

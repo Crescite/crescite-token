@@ -374,6 +374,24 @@ describe('Staking', () => {
       expect(balanceAfterUnstaking).to.eq(getExpectedBalance(amountToStake));
     });
 
+    it('should delete user claims when unstaking', async () => {
+      const { staking, account1, crescite } = await loadFixture(deployFixtures);
+      const amountToStake = big(NORMAL_ACCOUNT_STARTING_BALANCE);
+
+      const stakingContract = staking.connect(account1);
+      await crescite.connect(account1).approve(staking.address, amountToStake);
+
+      // stake then unstake one year later
+      await stakingContract.stakeTokens(amountToStake);
+      await nextBlockIsOneYearLater();
+
+      await stakingContract.claimRewards();
+      expect(await stakingContract.userRewardsClaimed(account1.address)).to.eq(big(240));
+
+      await stakingContract.unstakeTokens();
+      expect(await stakingContract.userRewardsClaimed(account1.address)).to.eq(0);
+    });
+
     it('should work for small amounts of staked token', async () => {
       const amountToStake = 1.5;
       const balanceAfterUnstaking = await stakeAndClaim(1.5, account1);
@@ -392,6 +410,26 @@ describe('Staking', () => {
     it('should work for very large amounts of staked tokens', async () => {
       const balanceAfterUnstaking = await stakeAndClaim(10_000_000, whaleAccount);
       expect(Number(ethers.utils.formatEther(balanceAfterUnstaking))).to.eq(4_001_200_000);
+    });
+  });
+
+  describe.only('claimRewards()', () => {
+    it('should transfer rewards to user', async () => {
+      const { staking, account1, crescite } = await loadFixture(deployFixtures);
+      const amountToStake = big(NORMAL_ACCOUNT_STARTING_BALANCE);
+
+      const stakingContract = staking.connect(account1);
+      await crescite.connect(account1).approve(staking.address, amountToStake);
+
+      // stake then claim rewards one year later
+      await stakingContract.stakeTokens(amountToStake);
+      await nextBlockIsOneYearLater();
+      await stakingContract.claimRewards();
+
+      const expectedRewardsClaimed = big(240);
+
+      expect(await crescite.balanceOf(account1.address)).to.eq(expectedRewardsClaimed);
+      expect(await stakingContract.userRewardsClaimed(account1.address)).to.eq(expectedRewardsClaimed);
     });
   });
 
