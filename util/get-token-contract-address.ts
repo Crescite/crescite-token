@@ -1,7 +1,9 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { tokenAddresses } from './env';
-import { ethAddressToXdc } from './eth-address-to-xdc';
 
+/**
+ * Get the address of the Crescite contract as set in .env
+ */
 export function getTokenContractAddress(hre: HardhatRuntimeEnvironment) {
   const networkName = hre.network.name;
 
@@ -9,7 +11,7 @@ export function getTokenContractAddress(hre: HardhatRuntimeEnvironment) {
     throw new Error(`getTokenContractAddress(): unknown network ${networkName}`);
   }
 
-  if(!tokenAddresses[networkName]) {
+  if (!tokenAddresses[networkName]) {
     throw new Error(`no token address for network "${networkName}"`);
   }
 
