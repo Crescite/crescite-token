@@ -4,10 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "npm run node",
+    "node": "NODE_ENV=development hardhat node",
+    "compile": "npx hardhat compile --force",
+    "test": "NODE_ENV=test hh test --network hardhat",
     "clean": "hardhat clean",
-    "compile": "npx hardhat compile",
-    "test": "hh test --network hardhat",
-    "deploy": "hardhat run scripts/deploy.ts --network xinfin"
+    "dev:init": "hardhat run dev:init",
+    "deploy:crescite:prod": "hardhat run scripts/deploy.ts --network xinfin",
+    "deploy:staking:apothem": "dotenv cross-var hardhat staking:deploy --crescite-contract %APOTHEM_TOKEN_CONTRACT% --network apothem --verbose"
   },
   "keywords": [],
   "author": "",
@@ -28,7 +32,9 @@
     "@types/mocha": "^9.1.1",
     "@types/node": "^18.11.6",
     "chai": "^4.3.6",
+    "cross-var": "^1.1.0",
     "dotenv": "^16.0.3",
+    "dotenv-cli": "^7.2.1",
     "ethers": "^5.7.2",
     "hardhat": "^2.12.4",
     "hardhat-ethernal": "^3.2.0",
