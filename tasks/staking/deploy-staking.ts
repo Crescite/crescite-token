@@ -1,15 +1,18 @@
 import { task } from 'hardhat/config';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { xdcAddressToEth } from '../util';
+import { xdcAddressToEth } from '../../util';
 
-task('deploy:staking', 'Deploys the Staking contract')
+task('staking:deploy', 'Deploys the Staking contract')
   .addParam('cresciteContract', 'Address of the Crescite token contract')
   .setAction(async ({ cresciteContract }, hre: HardhatRuntimeEnvironment) => {
     console.log('Deploying Staking to', hre.network.name);
 
+    const APR = hre.network.name === 'xinfin' ? 12 : 250;
+    console.log(`APR is set to ${APR}%`);
+
     try {
       const Staking = await hre.ethers.getContractFactory('Staking');
-      const staking = await Staking.deploy(xdcAddressToEth(cresciteContract));
+      const staking = await Staking.deploy(xdcAddressToEth(cresciteContract), APR);
       await staking.deployed();
 
       console.log('Staking contract deployed to', staking.address);
@@ -20,7 +23,7 @@ task('deploy:staking', 'Deploys the Staking contract')
           address: staking.address
         })
       }
-    } catch(e) {
+    } catch (e) {
       console.error(e);
     }
   });

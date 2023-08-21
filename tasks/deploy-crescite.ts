@@ -1,7 +1,7 @@
 import { task } from 'hardhat/config';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-task('deploy:crescite', 'Deploys the Crescite contract', async (taskArgs, hre: HardhatRuntimeEnvironment) => {
+task('crescite:deploy', 'Deploys the Crescite contract', async (taskArgs, hre: HardhatRuntimeEnvironment) => {
   console.log('Deploying Crescite to', hre.network.name);
 
   try {
@@ -11,13 +11,13 @@ task('deploy:crescite', 'Deploys the Crescite contract', async (taskArgs, hre: H
 
     console.log('Crescite deployed to', crescite.address);
 
-    if(['localhost', 'hardhat'].includes(hre.network.name)) {
+    if (['localhost', 'hardhat'].includes(hre.network.name)) {
       await (hre as any).ethernal.push({
         name: 'Crescite',
         address: crescite.address
       });
     }
-  } catch(e) {
+  } catch (e) {
     console.error(e);
   }
 });
