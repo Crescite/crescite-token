@@ -6,6 +6,7 @@
   "scripts": {
     "clean": "hardhat clean",
     "compile": "npx hardhat compile",
+    "test": "hh test --network hardhat",
     "deploy": "hardhat run scripts/deploy.ts --network xinfin"
   },
   "keywords": [],
@@ -30,6 +31,7 @@
     "dotenv": "^16.0.3",
     "ethers": "^5.7.2",
     "hardhat": "^2.12.4",
+    "hardhat-ethernal": "^3.2.0",
     "hardhat-gas-reporter": "^1.0.9",
     "rimraf": "^3.0.2",
     "solidity-coverage": "^0.8.2",
