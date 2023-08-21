@@ -16,7 +16,7 @@ import { getHardhatUserConfig } from './util';
 /**
  * Config
  */
-const config: HardhatUserConfig & { ethernal: any } = getHardhatUserConfig();
+const config: HardhatUserConfig = getHardhatUserConfig();
 
 export default config;
 
