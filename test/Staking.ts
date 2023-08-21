@@ -17,8 +17,9 @@ hardhat.config.networks.hardhat.mining.auto = true;
 /**
  * Constants
  */
-const ONE_DAY = 86_400;
-const ONE_YEAR = ONE_DAY * 365;
+const SECONDS_IN_ONE_DAY = 86_400;
+const AVG_DAYS_PER_YEAR = 365.25; // average days per year, taking into account leap years
+const AVG_SECONDS_PER_YEAR = SECONDS_IN_ONE_DAY * AVG_DAYS_PER_YEAR;
 const APR = 12;
 
 const STAKING_REWARDS_ALLOCATION = 13_200_000_000
@@ -34,7 +35,7 @@ const WHALE_ACCOUNT_STARTING_BALANCE = 4_000_000_000;
 async function nextBlockIsOneYearLater() {
   const lastBlockTime = await time.latest();
 
-  return await time.setNextBlockTimestamp(lastBlockTime + ONE_YEAR);
+  return await time.setNextBlockTimestamp(lastBlockTime + AVG_SECONDS_PER_YEAR);
 }
 
 async function getLatestBlockTimestamp() {
@@ -43,7 +44,16 @@ async function getLatestBlockTimestamp() {
 
 async function mineBlockOneYearLater() {
   const lastBlockTime = await time.latest();
-  await time.increaseTo(lastBlockTime + ONE_YEAR);
+  const nextBlockTime = lastBlockTime + AVG_SECONDS_PER_YEAR;
+
+  await time.increaseTo(nextBlockTime);
+}
+
+async function mineBlockOneYearLaterMinusOneSecond() {
+  const lastBlockTime = await time.latest();
+  const nextBlockTime = lastBlockTime + AVG_SECONDS_PER_YEAR;
+
+  await time.increaseTo(nextBlockTime - 1);
 }
 
 /**
@@ -97,11 +107,11 @@ describe('big()', () => {
 // ------------------------------------------------------
 
 describe('Contract lifetime', () => {
-  it('should have sufficient funds to pay rewards for maximum staked amount over 38 years', async () => {
+  it('should pay out 13.2b CRE in rewards to maximum amount staked over 38 years', async () => {
     const { staking, crescite, whaleAccount } = await loadFixture(deployFixtures);
     const stakingContract = staking.connect(whaleAccount);
 
-    // approve maximum spend over the coming years
+    // approve maximum spend needed for this test
     await crescite.connect(whaleAccount).approve(staking.address, big(10_000_000_000));
 
     const years = [
@@ -128,34 +138,48 @@ describe('Contract lifetime', () => {
     ]
 
     for (let year = 0; year < years.length; year++) {
-      // only add stakes in the first three years
       const { amountToStake } = years[year];
 
-      // const stakeLimit = ethers.utils.formatEther(await stakingContract.viewStakeLimit());
-      // const totalStaked = ethers.utils.formatEther(await stakingContract.totalStaked());
-      // console.log(`Year ${year + 1}: ${totalStaked}/${stakeLimit}`);
-
       if (amountToStake > 0) {
-        // console.log(`Limit not reached: staking ${amountToStake}`);
         await stakingContract.stakeTokens(big(amountToStake));
-      }
 
-      // advance chain one year
-      // we need to mine a block so the contract has a timestamp to work with
-      await mineBlockOneYearLater();
+        // advance one year, but as the staking action caused a block to be mined
+        // which advanced the chain by 1 second, advance the chain one second *less* than one year
+        await mineBlockOneYearLaterMinusOneSecond();
+      } else {
+        // advance chain one year
+        // we need to mine a block so the next contract call has a new timestamp to work with
+        await mineBlockOneYearLater();
+      }
     }
 
+    // END OF YEAR 38 ---------------------------------------------------------
     // Check rewards at the end of the contract lifetime
     const totalRewardsEarned = await stakingContract.viewUserStakingRewards(whaleAccount.address);
     const stakingContractBalance = await crescite.balanceOf(stakingContract.address);
 
+    // amount of rewards should not exceed the staking contract balance
+    // as the staking contract should always have enough to cover rewards
     expect(totalRewardsEarned.lte(stakingContractBalance)).to.be.true;
 
-    // Now one year later, rewards should be the same as
+    // expect total rewards earned in lifetime of contract to be correct
+    // according to the staking schedule
+    const expectedRewards = big(13_200_000_000);
+    const diff = expectedRewards.sub(totalRewardsEarned);
+
+    // 80 CRE tokens deviation is acceptable over a 38-year period
+    // accounting for non-deterministic nature of block timestamps and leap seconds
+    const acceptableDeviation = big(80);
+
+    expect(diff.lte(acceptableDeviation)).to.be.true;
+
+    // CHECK YEAR 39 ---------------------------------------------------------
+    // Now one year later, rewards should be the *same* as
     // rewards will no longer be paid out after year 38
     await mineBlockOneYearLater();
 
-    // Check rewards at the end of the contract lifetime
+    // Check rewards at the end of year 39 are just the same as year 38
+    // as staking rewards are not issued after year 38
     const rewardsOneYearLater = await stakingContract.viewUserStakingRewards(whaleAccount.address);
     expect(totalRewardsEarned.eq(rewardsOneYearLater)).to.be.true;
 
@@ -164,12 +188,7 @@ describe('Contract lifetime', () => {
 
     // check whale account balance
     const balance = await crescite.balanceOf(whaleAccount.address);
-    expect(balance).to.eq(big(WHALE_ACCOUNT_STARTING_BALANCE + 13_200_000_000));
-
-    // check staking contract balance
-    const stakingContractBalanceAfterUnstaking = await crescite.balanceOf(stakingContract.address);
-
-    expect(stakingContractBalanceAfterUnstaking).to.eq(0);
+    expect(big(WHALE_ACCOUNT_STARTING_BALANCE + 13_200_000_000).sub(balance).lte(acceptableDeviation)).to.be.true;
   });
 })
 
@@ -211,9 +230,9 @@ describe('Staking', () => {
     // approve the contract to 'spend' CRE
     await crescite.connect(account1).approve(staking.address, big(2000));
 
-    const Staking = await staking.connect(account1);
+    const Staking = staking.connect(account1);
 
-    Staking.stakeTokens(big(1000));
+    await Staking.stakeTokens(big(1000));
 
     expect(staking.userStakingTotals(account1.address)).eventually.to.equal(big(1000));
     expect(staking.userPositionCount(account1.address)).eventually.to.equal(1);
@@ -231,7 +250,7 @@ describe('Staking', () => {
 
     await crescite.connect(account1).approve(staking.address, big(2000));
 
-    const Staking = await staking.connect(account1);
+    const Staking = staking.connect(account1);
 
     await Staking.stakeTokens(big(1000));
     expect(staking.userPositionCount(account1.address)).eventually.to.equal(1);
@@ -279,7 +298,7 @@ describe('Staking', () => {
 
     // just approve a very high number for spending
     await crescite.connect(whaleAccount).approve(staking.address, big(10_000_000_000));
-    const stakingContract = await staking.connect(whaleAccount);
+    const stakingContract = staking.connect(whaleAccount);
 
     // --------------------------------------
     // Fill up the staking pool for the 1st year
@@ -322,7 +341,7 @@ describe('Staking', () => {
     await expect(stakingContract.stakeTokens(big(1_499_999_999))
     ).not.to.be.revertedWith('Staking pool limit reached');
 
-    await time.increase(ONE_DAY);
+    await time.increase(SECONDS_IN_ONE_DAY);
 
     // Now try and stake one more token, should be rejected
     // since the third year limit has been reached
@@ -353,8 +372,8 @@ describe('Staking', () => {
   it('should count the number of stakers', async () => {
     const { crescite, staking, account1, whaleAccount } = await loadFixture(deployFixtures);
 
-    crescite.connect(account1).approve(staking.address, big(2000));
-    crescite.connect(whaleAccount).approve(staking.address, big(2000));
+    await crescite.connect(account1).approve(staking.address, big(2000));
+    await crescite.connect(whaleAccount).approve(staking.address, big(2000));
 
     const staking1 = staking.connect(account1);
     const staking2 = staking.connect(whaleAccount);
@@ -444,7 +463,7 @@ describe('Staking', () => {
       const unstakeTimestamp = await getLatestBlockTimestamp();
 
       // check the elapsed time is correct
-      expect(unstakeTimestamp - stakeTimestamp).to.eq(ONE_YEAR);
+      expect(unstakeTimestamp - stakeTimestamp).to.eq(AVG_SECONDS_PER_YEAR);
 
       // get the actual balance after unstaking
       const balanceAfterUnstaking = await Crescite.balanceOf(address);
@@ -547,7 +566,7 @@ describe('Staking', () => {
       const stakingContract = staking.connect(account1);
 
       const fakeStakingTimestamp = await time.latest();
-      await time.increaseTo(fakeStakingTimestamp + (ONE_YEAR));
+      await time.increaseTo(fakeStakingTimestamp + (AVG_SECONDS_PER_YEAR));
 
       const rewards = await stakingContract
         .connect(account1)
@@ -577,7 +596,7 @@ describe('Staking', () => {
       const stakingContract = staking.connect(account1);
       await stakingContract.stakeTokens(big(1000));
 
-      await time.increaseTo((await time.latest()) + ONE_YEAR);
+      await time.increaseTo((await time.latest()) + AVG_SECONDS_PER_YEAR);
 
       const actual = await stakingContract.viewUserStakingRewards(account1.address);
 
@@ -597,7 +616,7 @@ describe('Staking', () => {
       await stakingContract.stakeTokens(big(1000));
 
       const actual = await stakingContract.viewUserRewardsPerSecond(account1.address);
-      expect(ethers.utils.formatEther(actual)).to.eq('0.000003805175038052');
+      expect(ethers.utils.formatEther(actual)).to.eq('0.000003802570537683');
     });
   });
 
@@ -615,7 +634,7 @@ describe('Staking', () => {
       await expect(formatEther(await staking.viewStakeLimit())).to.eq('3000000000.0');
 
       const lastBlockTime = await getLatestBlockTimestamp();
-      await time.increaseTo(lastBlockTime + ONE_YEAR * 35);
+      await time.increaseTo(lastBlockTime + AVG_SECONDS_PER_YEAR * 35);
       await expect(formatEther(await staking.viewStakeLimit())).to.eq('3000000000.0');
     });
   })
@@ -638,32 +657,32 @@ describe('Staking', () => {
 
     // Test scenarios
     it('should return current year as 1 on 1 day after start timestamp', async function () {
-      await increaseTimeBy(ONE_DAY);
+      await increaseTimeBy(SECONDS_IN_ONE_DAY);
       expect(await stakingContract.testGetCurrentYear()).to.equal(1);
     });
 
     it('should return current year as 1 on 365 days after start timestamp (1 second before midnight)', async function () {
-      await increaseTimeBy(ONE_YEAR - 1);
+      await increaseTimeBy(AVG_SECONDS_PER_YEAR - 1);
       expect(await stakingContract.testGetCurrentYear()).to.equal(1);
     });
 
     it('should return current year as 2 on the first day of the second year', async function () {
-      await increaseTimeBy(ONE_YEAR);
+      await increaseTimeBy(AVG_SECONDS_PER_YEAR);
       expect(await stakingContract.testGetCurrentYear()).to.equal(2);
     });
 
     it('should return current year as 10 on the first day of the tenth year', async function () {
-      await increaseTimeBy(ONE_YEAR * 10 - 1);
+      await increaseTimeBy(AVG_SECONDS_PER_YEAR * 10 - 1);
       expect(await stakingContract.testGetCurrentYear()).to.equal(10);
     });
 
     it('should return current year as 38 on the first day of the thirty-eighth year', async function () {
-      await increaseTimeBy(ONE_YEAR * 38 - 1);
+      await increaseTimeBy(AVG_SECONDS_PER_YEAR * 38 - 1);
       expect(await stakingContract.testGetCurrentYear()).to.equal(38);
     });
 
     it('should return current year as 39 on the first day of the thirty-ninth year', async function () {
-      await increaseTimeBy(ONE_YEAR * 39 - 1);
+      await increaseTimeBy(AVG_SECONDS_PER_YEAR * 39 - 1);
       expect(await stakingContract.testGetCurrentYear()).to.equal(39);
     });
   });

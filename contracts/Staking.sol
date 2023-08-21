@@ -24,7 +24,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
 
   uint256 private APR;
   uint256 private constant PRECISION = 1e18;
-  uint256 private constant SECONDS_IN_YEAR = 365 days;
+  uint256 private constant SECONDS_IN_YEAR = 365.25 days; // average days per year (due to leap years)
 
   uint256 private constant YEAR_1_LIMIT = 500_000_000 * PRECISION;
   uint256 private constant YEAR_2_LIMIT = 1_500_000_000 * PRECISION;
@@ -42,7 +42,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
 
   constructor(address tokenAddress, uint256 apr) {
     START_DATE = block.timestamp;
-    END_DATE = START_DATE + 365 days * 38;
+    END_DATE = START_DATE + SECONDS_IN_YEAR * 38;
 
     token = Crescite(tokenAddress);
     APR = apr;
@@ -306,7 +306,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
   function getCurrentYear() internal view returns (uint256) {
     uint256 elapsedTime = sub(block.timestamp, START_DATE);
 
-    // Assuming 1 year is 31536000 seconds, add 1 to start the year count from 1.
+    // Assuming 1 year is 360.25 days in seconds, add 1 to start the year count from 1.
     uint256 currentYear = add(1, (elapsedTime / SECONDS_IN_YEAR));
     return currentYear;
   }
