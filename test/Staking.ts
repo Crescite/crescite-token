@@ -21,6 +21,10 @@ const ONE_DAY = 86_400;
 const ONE_YEAR = ONE_DAY * 365;
 const APR = 12;
 
+const NORMAL_ACCOUNT_STARTING_BALANCE = 2_000;
+const WHALE_ACCOUNT_STARTING_BALANCE = 4_000_000_000;
+const STAKING_CONTRACT_BALANCE = 13_200_000_000;
+
 
 // ------------------------------------------------------
 
@@ -74,9 +78,9 @@ async function deployFixtures() {
   //   simulating the amount of CRE released on first mint in 2022
   // * regular account holds 2000 CRE
   // * staking contract holds 13.2 billion CRE
-  await crescite.mint(account1.address, big(2000));
-  await crescite.mint(whaleAccount.address, big(2_999_998_000));
-  await crescite.mint(staking.address, big(13_200_000_000));
+  await crescite.mint(account1.address, big(NORMAL_ACCOUNT_STARTING_BALANCE));
+  await crescite.mint(whaleAccount.address, big(WHALE_ACCOUNT_STARTING_BALANCE));
+  await crescite.mint(staking.address, big(STAKING_CONTRACT_BALANCE));
 
   return { crescite, staking, account1, whaleAccount, signers };
 }
@@ -87,21 +91,6 @@ describe('big()', () => {
   it('should convert an integer to a BigNumber of precision 1e18', () => {
     expect(big(100) instanceof ethers.BigNumber).to.be.true;
     expect(big(100).toString()).to.eq('100000000000000000000');
-  })
-});
-
-// ------------------------------------------------------
-
-/**
- * Test the fixtures
- */
-describe('Fixtures', () => {
-  it('should mint 13.2 billion CRE', async () => {
-    const { crescite } = await loadFixture(deployFixtures);
-
-    const totalSupply = await crescite.totalSupply()
-
-    expect(formatEther(totalSupply)).to.equal('16200000000.0');
   })
 });
 
@@ -217,7 +206,8 @@ describe('Staking', () => {
     ).not.to.be.revertedWith('Staking pool limit reached');
 
     // Now fill up the remaining allowance for the 2nd year
-    // (2nd year limit is 1_500_000_000)
+    // (500_000_001 of 2nd year limit 1_500_000_000 has been staked)
+    // (so 999_999_999 is the remaining allowance)
     await expect(stakingContract.stakeTokens(big(999_999_999))
     ).not.to.be.revertedWith('Staking pool limit reached');
 
@@ -235,10 +225,10 @@ describe('Staking', () => {
     ).not.to.be.revertedWith('Staking pool limit reached');
 
     // Now fill up the third year staking pool
+    // 1_500_000_001 has been staked so far
     await expect(stakingContract.stakeTokens(big(1_499_999_999))
     ).not.to.be.revertedWith('Staking pool limit reached');
 
-    console.log(`Total staked: ${await stakingContract.totalStaked()}`);
     await time.increase(ONE_DAY);
 
     // Now try and stake one more token, should be rejected
@@ -246,6 +236,13 @@ describe('Staking', () => {
     await expect(stakingContract.stakeTokens(big(1))
     ).to.be.revertedWith('Staking pool limit reached');
 
+    // Now move into the fourth year, everything should be the same
+    await mineBlockOneYearLater();
+
+    // Now try and stake one more token, should be rejected
+    // since the third year limit has been reached
+    await expect(stakingContract.stakeTokens(big(1))
+    ).to.be.revertedWith('Staking pool limit reached');
   });
 
   it('should allow staking of full account balance', async () => {
@@ -311,6 +308,18 @@ describe('Staking', () => {
     /**
      * Create a scenario where the given number of tokens are
      * staked for exactly one year, then unstaked.
+     * Return the expected balance after unstaking and the actual balance.
+     *
+     * @param amountToStake
+     */
+    function getExpectedBalance(amountToStake: number) {
+      const expectedRewards = amountToStake * APR / 100;
+      return big(NORMAL_ACCOUNT_STARTING_BALANCE + expectedRewards);
+    }
+
+    /**
+     * Create a scenario where the given number of tokens are
+     * staked for exactly one year, then unstaked.
      *
      * Return the expected balance after unstaking and the actual balance.
      *
@@ -359,23 +368,30 @@ describe('Staking', () => {
      * whaleAccount: 20,000,000 CRE
      */
     it('should transfer original stake plus rewards to user', async () => {
-      const balanceAfterUnstaking = await stakeAndClaim(1000, account1);
-      expect(ethers.utils.formatEther(balanceAfterUnstaking)).to.eq('2120.0');
+      const amountToStake = 1000;
+      const balanceAfterUnstaking = await stakeAndClaim(amountToStake, account1);
+
+      expect(balanceAfterUnstaking).to.eq(getExpectedBalance(amountToStake));
     });
 
     it('should work for small amounts of staked token', async () => {
+      const amountToStake = 1.5;
       const balanceAfterUnstaking = await stakeAndClaim(1.5, account1);
-      expect(ethers.utils.formatEther(balanceAfterUnstaking)).to.eq('2000.18');
+
+      expect(balanceAfterUnstaking).to.eq(getExpectedBalance(amountToStake));
     });
 
     it('should work for very precise amounts of staked token', async () => {
-      const balanceAfterUnstaking = await stakeAndClaim(100.123456789012345, account1);
+      const amountToStake = 100.123456789012345;
+      const balanceAfterUnstaking = await stakeAndClaim(amountToStake, account1);
+
+      // hardcode this expected balance, more precision required than JS can handle
       expect(ethers.utils.formatEther(balanceAfterUnstaking)).to.eq('2012.014814814681482');
     });
 
     it('should work for very large amounts of staked tokens', async () => {
       const balanceAfterUnstaking = await stakeAndClaim(10_000_000, whaleAccount);
-      expect(ethers.utils.formatEther(balanceAfterUnstaking)).to.eq('3001198000.0');
+      expect(Number(ethers.utils.formatEther(balanceAfterUnstaking))).to.eq(4_001_200_000);
     });
   });
 
@@ -540,7 +556,7 @@ describe('Staking', () => {
 
       await stakingContract.pause();
 
-      await expect(stakingContract.stakeTokens(100)).to.be.revertedWith('Staking is paused');
+      await expect(stakingContract.stakeTokens(100)).to.be.revertedWith('Pausable: paused');
     });
 
     it('should only be callable by contract owner', async () => {
@@ -555,7 +571,7 @@ describe('Staking', () => {
       const stakingContract = staking.connect(account1);
 
       await stakingContract.pause();
-      await expect(stakingContract.pause()).to.be.revertedWith('Contract is already paused');
+      await expect(stakingContract.pause()).to.be.revertedWith('Pausable: paused');
     });
   });
 
@@ -565,17 +581,17 @@ describe('Staking', () => {
       const stakingContract = staking.connect(account1);
 
       await stakingContract.pause();
-      await expect(stakingContract.stakeTokens(100)).to.be.revertedWith('Staking is paused');
+      await expect(stakingContract.stakeTokens(100)).to.be.revertedWith('Pausable: paused');
 
       await stakingContract.resume();
-      await expect(stakingContract.stakeTokens(100)).not.to.be.revertedWith('Staking is paused');
+      await expect(stakingContract.stakeTokens(100)).not.to.be.revertedWith('Pausable: paused');
     });
 
     it('should not resume if contract is not paused', async () => {
       const { staking, account1 } = await loadFixture(deployFixtures);
       const stakingContract = staking.connect(account1);
 
-      await expect(stakingContract.resume()).to.be.revertedWith('Contract is not paused');
+      await expect(stakingContract.resume()).to.be.revertedWith('Pausable: not paused');
     });
 
     it('should only be callable by contract owner', async () => {
