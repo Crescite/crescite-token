@@ -1,3 +1,4 @@
+import { EthernalConfig } from 'hardhat-ethernal/dist/types';
 import { HardhatUserConfig } from 'hardhat/config';
 import {
   APOTHEM_NETWORK_URL,
@@ -11,7 +12,7 @@ import {
   XINFIN_PRIVATE_KEY
 } from './env';
 
-export function getHardhatUserConfig(): HardhatUserConfig & { ethernal: any } {
+export function getHardhatUserConfig(): HardhatUserConfig {
   return {
     solidity: {
       version: '0.8.17',
@@ -63,6 +64,6 @@ export function getHardhatUserConfig(): HardhatUserConfig & { ethernal: any } {
     ethernal: {
       resetOnStart: ETHERNAL_WORKSPACE,
       disabled: process.env.NODE_ENV === 'test',
-    }
+    } as EthernalConfig
   };
 }

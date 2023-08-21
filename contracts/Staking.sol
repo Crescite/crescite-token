@@ -37,6 +37,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
   event Staked(address indexed user, uint256 amount);
   event Unstaked(address indexed user, uint256 amount, uint256 rewards);
   event ClaimRewards(address indexed user, uint256 rewards);
+  event WithdrawFunds(address indexed user, uint256 amount);
 
   constructor(address tokenAddress, uint256 apr) {
     START_DATE = block.timestamp;
@@ -141,6 +142,17 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     token.transfer(user, rewards);
 
     emit ClaimRewards(user, rewards);
+  }
+
+  /**
+   * In an emergency this allows the contract owner to
+   * withdraw all CRE funds held in the contract.
+   */
+  function withdrawFunds() external nonReentrant onlyOwner whenPaused {
+    uint256 amount = token.balanceOf(address(this));
+
+    token.transfer(owner(), amount);
+    emit WithdrawFunds(owner(), amount);
   }
 
   /**

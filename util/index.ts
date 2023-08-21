@@ -6,6 +6,7 @@ export * from './format-ether';
 export * from './format-number-string';
 export * from './get-balance';
 export * from './get-hardhat-user-config';
+export * from './get-owner-address';
 export * from './get-staking-contract-address';
 export * from './get-token-contract-address';
 export * from './total-supply';
