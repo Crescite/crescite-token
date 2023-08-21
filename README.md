@@ -52,7 +52,7 @@ TOKENB_CONTRACT=[token contract address]
 or within your shell / CLI:
 
 ```
-export TOKEN_CONTRQACT=[token contract address]
+export TOKEN_CONTRACT=[token contract address]
 ```
 
 ## Hardhat Tasks
