@@ -15,7 +15,7 @@ function applyNetwork(opts: Record<string, string> = {}) {
   }
 }
 
-task('init:local', 'Deploy contracts to local network, mint tokens')
+task('dev:init', 'Deploy contracts to local network, mint tokens')
   .setAction(async (taskArgs: any, hre: HardhatRuntimeEnvironment) => {
       await hre.run('crescite:deploy', applyNetwork());
       await hre.run('staking:deploy', applyNetwork({ cresciteContract: getTokenContractAddress(hre) }));
