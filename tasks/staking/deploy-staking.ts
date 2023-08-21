@@ -6,6 +6,7 @@ task('staking:deploy', 'Deploys the Staking contract')
   .addParam('cresciteContract', 'Address of the Crescite token contract')
   .setAction(async ({ cresciteContract }, hre: HardhatRuntimeEnvironment) => {
     console.log('Deploying Staking to', hre.network.name);
+    console.log('CRE contract address', cresciteContract);
 
     const APR = hre.network.name === 'xinfin' ? 12 : 250;
     console.log(`APR is set to ${APR}%`);
