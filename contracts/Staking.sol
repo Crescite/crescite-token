@@ -45,13 +45,8 @@ contract Staking is DSMath {
 
     address user = msg.sender;
 
-    console.log('[Crescite] precision', token.decimals());
-    console.log('[Staking] transfer to contract', amount);
-
     // Transfer tokens from user to staking contract
     token.transferFrom(user, address(this), amount);
-
-    console.log('[Staking] New position', amount, block.timestamp);
 
     // Create a new staking position for the amount and block timestamp
     stakingPositions[user].push(StakingPosition(amount, block.timestamp));
@@ -91,8 +86,6 @@ contract Staking is DSMath {
     }
 
     // Transfer staked tokens from staking contract back to user
-    // TODO is this already actually denominated in Wei ?
-    // TODO Check Metamask is showing correct amounts
     token.transfer(user, add(amountStaked, rewards));
 
     // Remove user's staking entry
@@ -131,7 +124,7 @@ contract Staking is DSMath {
    */
   function calculatePositionRewards(uint256 positionAmount, uint256 positionTimestamp) internal view returns (uint256) {
     // calculate the rewards for a year from the position amount
-    uint256 rewardsPerYear = wmul(positionAmount * PRECISION, wdiv(APR * PRECISION, 100 * PRECISION));
+    uint256 rewardsPerYear = wmul(positionAmount, wdiv(APR * PRECISION, 100 * PRECISION));
 
     // then calculate the rewards per second for this position
     uint256 rewardsPerSecond = wdiv(rewardsPerYear, SECONDS_IN_YEAR * PRECISION);
@@ -142,13 +135,12 @@ contract Staking is DSMath {
     // Calculate the rewards based on the elapsed time and rewards per second
     uint256 reward = wmul(rewardsPerSecond, elapsedSeconds * PRECISION);
 
-    console.log('[Staking] positionAmount', positionAmount);
-    console.log('[Staking] rewardsPerYear', rewardsPerYear);
-    console.log('[Staking] rewardsPerSecond', rewardsPerSecond);
-    console.log('[Staking] rewards in wei', reward);
+//    console.log('[Staking] positionAmount', positionAmount);
+//    console.log('[Staking] rewardsPerYear', rewardsPerYear);
+//    console.log('[Staking] rewardsPerSecond', rewardsPerSecond);
+//    console.log('[Staking] elapsedSeconds', elapsedSeconds);
+//    console.log('[Staking] rewards in wei', reward);
 
-    // TODO return value in Wei and then modify the transfer?
-    // TODO this doesn't work for small reward values, just returns 0
     // Return the calculated rewards
     return reward;
   }
