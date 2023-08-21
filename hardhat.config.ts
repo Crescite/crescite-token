@@ -1,17 +1,17 @@
 import '@nomicfoundation/hardhat-toolbox';
 import '@openzeppelin/hardhat-upgrades';
-import { HardhatUserConfig } from 'hardhat/config';
-import { getHardhatUserConfig } from './util';
 
 /**
  * Plugins
  */
-require('hardhat-ethernal');
+import 'hardhat-ethernal';
+import { HardhatUserConfig } from 'hardhat/config';
 
 /**
  * Tasks
  */
 import './tasks';
+import { getHardhatUserConfig } from './util';
 
 /**
  * Config

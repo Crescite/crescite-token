@@ -21,9 +21,9 @@ const ONE_DAY = 86_400;
 const ONE_YEAR = ONE_DAY * 365;
 const APR = 12;
 
+const STAKING_REWARDS_ALLOCATION = 13_200_000_000
 const NORMAL_ACCOUNT_STARTING_BALANCE = 2_000;
 const WHALE_ACCOUNT_STARTING_BALANCE = 4_000_000_000;
-const STAKING_CONTRACT_BALANCE = 13_200_000_000;
 
 
 // ------------------------------------------------------
@@ -80,7 +80,7 @@ async function deployFixtures() {
   // * staking contract holds 13.2 billion CRE
   await crescite.mint(account1.address, big(NORMAL_ACCOUNT_STARTING_BALANCE));
   await crescite.mint(whaleAccount.address, big(WHALE_ACCOUNT_STARTING_BALANCE));
-  await crescite.mint(staking.address, big(STAKING_CONTRACT_BALANCE));
+  await crescite.mint(staking.address, big(STAKING_REWARDS_ALLOCATION));
 
   return { crescite, staking, account1, whaleAccount, signers };
 }
@@ -95,6 +95,83 @@ describe('big()', () => {
 });
 
 // ------------------------------------------------------
+
+describe('Contract lifetime', () => {
+  it('should have sufficient funds to pay rewards for maximum staked amount over 38 years', async () => {
+    const { staking, crescite, whaleAccount } = await loadFixture(deployFixtures);
+    const stakingContract = staking.connect(whaleAccount);
+
+    // approve maximum spend over the coming years
+    await crescite.connect(whaleAccount).approve(staking.address, big(10_000_000_000));
+
+    const years = [
+      {
+        limit: 500_000_000,
+        amountToStake: 500_000_000,
+        rewards: 60_000_000,
+      },
+      {
+        limit: 1_500_000_000,
+        amountToStake: 1_000_000_000,
+        rewards: 180_000_000,
+      },
+      {
+        limit: 3_000_000_000,
+        amountToStake: 1_500_000_000,
+        rewards: 360_000_000,
+      },
+      ...Array(35).fill({
+        limit: 3_000_000_000,
+        amountToStake: 0,
+        rewards: 360_000_000,
+      })
+    ]
+
+    for (let year = 0; year < years.length; year++) {
+      // only add stakes in the first three years
+      const { amountToStake } = years[year];
+
+      // const stakeLimit = ethers.utils.formatEther(await stakingContract.viewStakeLimit());
+      // const totalStaked = ethers.utils.formatEther(await stakingContract.totalStaked());
+      // console.log(`Year ${year + 1}: ${totalStaked}/${stakeLimit}`);
+
+      if (amountToStake > 0) {
+        // console.log(`Limit not reached: staking ${amountToStake}`);
+        await stakingContract.stakeTokens(big(amountToStake));
+      }
+
+      // advance chain one year
+      // we need to mine a block so the contract has a timestamp to work with
+      await mineBlockOneYearLater();
+    }
+
+    // Check rewards at the end of the contract lifetime
+    const totalRewardsEarned = await stakingContract.viewUserStakingRewards(whaleAccount.address);
+    const stakingContractBalance = await crescite.balanceOf(stakingContract.address);
+
+    expect(totalRewardsEarned.lte(stakingContractBalance)).to.be.true;
+
+    // Now one year later, rewards should be the same as
+    // rewards will no longer be paid out after year 38
+    await mineBlockOneYearLater();
+
+    // Check rewards at the end of the contract lifetime
+    const rewardsOneYearLater = await stakingContract.viewUserStakingRewards(whaleAccount.address);
+    expect(totalRewardsEarned.eq(rewardsOneYearLater)).to.be.true;
+
+    // Unstake all tokens
+    await stakingContract.unstakeTokens();
+
+    // check whale account balance
+    const balance = await crescite.balanceOf(whaleAccount.address);
+    expect(balance).to.eq(big(WHALE_ACCOUNT_STARTING_BALANCE + 13_200_000_000));
+
+    // check staking contract balance
+    const stakingContractBalanceAfterUnstaking = await crescite.balanceOf(stakingContract.address);
+
+    expect(stakingContractBalanceAfterUnstaking).to.eq(0);
+  });
+})
 
 /**
  * Test the Staking contract
@@ -413,7 +490,7 @@ describe('Staking', () => {
     });
   });
 
-  describe.only('claimRewards()', () => {
+  describe('claimRewards()', () => {
     it('should transfer rewards to user', async () => {
       const { staking, account1, crescite } = await loadFixture(deployFixtures);
       const amountToStake = big(NORMAL_ACCOUNT_STARTING_BALANCE);
