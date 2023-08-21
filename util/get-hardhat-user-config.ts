@@ -58,6 +58,7 @@ export function getHardhatUserConfig(): HardhatUserConfig & { ethernal: any } {
     },
     ethernal: {
       resetOnStart: ETHERNAL_WORKSPACE,
+      disabled: process.env.NODE_ENV !== 'test',
     }
   };
 }
