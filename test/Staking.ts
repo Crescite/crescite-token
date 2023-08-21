@@ -216,12 +216,28 @@ describe('Staking', () => {
     Staking.stakeTokens(big(1000));
 
     expect(staking.userStakingTotals(account1.address)).eventually.to.equal(big(1000));
+    expect(staking.userPositionCount(account1.address)).eventually.to.equal(1);
     expect(crescite.balanceOf(account1.address)).eventually.to.equal(big(1000));
 
     await Staking.stakeTokens(big(1000));
 
     expect(staking.userStakingTotals(account1.address)).eventually.to.equal(big(2000));
+    expect(staking.userPositionCount(account1.address)).eventually.to.equal(2);
     expect(crescite.balanceOf(account1.address)).eventually.to.equal(0);
+  });
+
+  it('should store count of user positions', async () => {
+    const { crescite, staking, account1 } = await loadFixture(deployFixtures);
+
+    await crescite.connect(account1).approve(staking.address, big(2000));
+
+    const Staking = await staking.connect(account1);
+
+    await Staking.stakeTokens(big(1000));
+    expect(staking.userPositionCount(account1.address)).eventually.to.equal(1);
+
+    await Staking.stakeTokens(big(1000));
+    expect(staking.userPositionCount(account1.address)).eventually.to.equal(2);
   });
 
   it('should keep count of all tokens staked', async () => {
@@ -467,6 +483,20 @@ describe('Staking', () => {
 
       await stakingContract.unstakeTokens();
       expect(await stakingContract.userRewardsClaimed(account1.address)).to.eq(0);
+    });
+
+    it('should remove users position count', async () => {
+      const { crescite, staking, account1 } = await loadFixture(deployFixtures);
+
+      await crescite.connect(account1).approve(staking.address, big(2000));
+
+      const Staking = await staking.connect(account1);
+
+      await Staking.stakeTokens(big(1000));
+      await Staking.stakeTokens(big(1000));
+      await Staking.unstakeTokens();
+
+      expect(staking.userPositionCount(account1.address)).eventually.to.equal(0);
     });
 
     it('should work for small amounts of staked token', async () => {

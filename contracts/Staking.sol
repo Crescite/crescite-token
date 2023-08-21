@@ -33,6 +33,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
   mapping(address => StakingPosition[]) public stakingPositions;
   mapping(address => uint256) public userStakingTotals;
   mapping(address => uint256) public userRewardsClaimed;
+  mapping(address => uint256) public userPositionCount;
 
   event Staked(address indexed user, uint256 amount);
   event Unstaked(address indexed user, uint256 amount, uint256 rewards);
@@ -69,6 +70,9 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
 
     // Update user's total staked amount
     userStakingTotals[user] = add(userStakingTotals[user], amount);
+
+    // increment number of positions held by user by one
+    userPositionCount[user] = add(userPositionCount[user], 1);
 
     // Update global total staking balance
     totalStaked = add(totalStaked, amount);
@@ -108,6 +112,9 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
 
     // Remove user's staking entry
     delete stakingPositions[user];
+
+    // Remove user's staking position count
+    delete userPositionCount[user];
 
     // Remove record of user's rewards claims
     delete userRewardsClaimed[user];
