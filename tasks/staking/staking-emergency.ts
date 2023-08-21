@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { formatEther } from 'ethers/lib/utils';
 import { task } from 'hardhat/config';
 import prompts from 'prompts';
-import { bindToCrescite, bindToStaking, getOwnerAddress } from '../../util';
+import { bindToCrescite, bindToStaking, getOwnerAddress, logSymbol } from '../../util';
 
 /**
  * This task should only be used in an emergency situation that requires
@@ -29,7 +29,7 @@ task('staking:emergency', 'Withdraw staking pool tokens (emergency use - require
   console.log(chalk.red.bold('This will withdraw all user-staked CRE and all CRE allocated for staking rewards!'));
   console.log('\nNetwork:', chalk.yellow(hre.network.name));
   console.log('Staking contract:', chalk.yellow(staking.address));
-  console.log('Staking contract balance: ', chalk.yellow(`${await crescite.balanceOf(staking.address)}`));
+  console.log('Staking contract balance:', chalk.yellow(`${await crescite.balanceOf(staking.address)}`));
   console.log('Number of stakers:', chalk.yellow(`${await staking.numberOfStakers()}`));
   console.log('Total staked:', chalk.yellow(`${await staking.totalStaked()}`));
   console.log('\nYou are transacting from:', chalk.green(address));
@@ -64,11 +64,11 @@ task('staking:emergency', 'Withdraw staking pool tokens (emergency use - require
     const newContractBalance = await crescite.balanceOf(staking.address);
     const newAccountBalance = await crescite.balanceOf(address);
 
-    console.log(chalk.green(`\nCRE successfully transferred from ${staking.address} to ${address}`));
-    console.log('txId:', chalk.yellow(receipt.transactionHash));
-    console.log('\nStaking contract CRE balance is now:', chalk.yellow(newContractBalance));
-    console.log('Your CRE balance is now:', chalk.yellow(newAccountBalance));
-    console.log(chalk.green('\nDone'));
+    console.log(`\n- CRE successfully transferred from ${chalk.yellow(staking.address)} to ${chalk.yellow(address)}`);
+    console.log('- txId:', chalk.yellow(receipt.transactionHash));
+    console.log('- Staking contract CRE balance is now:', chalk.yellow(newContractBalance));
+    console.log('- Your CRE balance is now:', chalk.yellow(newAccountBalance));
+    console.log(logSymbol.success, chalk.green('Done'));
 
   } else {
     console.log('Cancelled, no tokens transferred.');

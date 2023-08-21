@@ -9,5 +9,6 @@ export * from './get-hardhat-user-config';
 export * from './get-owner-address';
 export * from './get-staking-contract-address';
 export * from './get-token-contract-address';
+export * from './log-symbol';
 export * from './total-supply';
 export * from './xdc-address-to-eth';
