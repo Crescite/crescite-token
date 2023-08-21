@@ -1,10 +1,14 @@
 import { HardhatUserConfig } from 'hardhat/config';
 import {
   APOTHEM_NETWORK_URL,
-  APOTHEM_PRIVATE_KEY, DEV_ACCOUNT_1, DEV_ACCOUNT_1_PRIVATE_KEY, ETHERNAL_WORKSPACE,
+  APOTHEM_PRIVATE_KEY,
+  DEV_ACCOUNT_1_PRIVATE_KEY,
+  ETHERNAL_WORKSPACE,
+  HARDHAT_ACCOUNT_2_PRIVATE_KEY,
   HARDHAT_NETWORK_URL,
   HARDHAT_PRIVATE_KEY,
-  XINFIN_NETWORK_URL, XINFIN_PRIVATE_KEY
+  XINFIN_NETWORK_URL,
+  XINFIN_PRIVATE_KEY
 } from './env';
 
 export function getHardhatUserConfig(): HardhatUserConfig & { ethernal: any } {
@@ -23,18 +27,18 @@ export function getHardhatUserConfig(): HardhatUserConfig & { ethernal: any } {
     networks: {
       hardhat: {
         mining: {
-          auto: true,
-          // interval: 10000,
+          auto: false,
+          interval: 2000,
         },
 
         // Simplify the Hardhat defaults (10 accounts not required)
         accounts: [
           {
-            privateKey: '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+            privateKey: HARDHAT_PRIVATE_KEY,
             balance: '10000000000000000000'
           },
           {
-            privateKey: '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
+            privateKey: HARDHAT_ACCOUNT_2_PRIVATE_KEY,
             balance: '5000000000000000000'
           },
           {
@@ -58,7 +62,7 @@ export function getHardhatUserConfig(): HardhatUserConfig & { ethernal: any } {
     },
     ethernal: {
       resetOnStart: ETHERNAL_WORKSPACE,
-      disabled: process.env.NODE_ENV !== 'test',
+      disabled: process.env.NODE_ENV === 'test',
     }
   };
 }
