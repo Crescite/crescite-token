@@ -7,6 +7,13 @@ import hardhat, { ethers } from 'hardhat';
 import { Crescite, StakingTestHarness } from '../typechain-types';
 import { log } from './util/log';
 
+//
+// RFC-2119 (guidance on verbs, should -> must)
+// https://www.ietf.org/rfc/rfc2119.txt
+//
+// Order: musts first vs "must nots" to come afterwards
+//
+
 // ------------------------------------------------------
 
 // Enable auto-mining
@@ -397,6 +404,105 @@ describe('Staking', () => {
     expect(staking.numberOfStakers()).eventually.to.equal(0);
   });
 
+  describe('positionClose()', () => {
+    it('should close a position, update user and global staking totals', async () => {
+      const fixtures = await loadFixture(deployFixtures);
+
+      const account1 = fixtures.account1;
+      const crescite = fixtures.crescite.connect(account1);
+      const staking = fixtures.staking.connect(account1);
+
+      await crescite.approve(staking.address, big(1500));
+      const startingBalance = await crescite.balanceOf(account1.address);
+
+      await staking.stakeTokens(big(500));
+      await staking.stakeTokens(big(500));
+      await staking.stakeTokens(big(500));
+
+      expect(staking.userPositionCount(account1.address)).eventually.to.equal(3);
+
+      await mineBlockOneYearLater();
+
+      for (let i = 0; i < 3; i++) {
+        const numberOfPositions = await staking.userPositionCount(account1.address);
+        expect(await staking.userStakingTotals(account1.address)).to.equal((big(1500 - (500 * i))));
+        expect(await staking.totalStaked()).to.equal((big(1500 - (500 * i))));
+        expect(numberOfPositions).to.equal(3 - i);
+        await staking.positionClose(0);
+      }
+
+      const endingBalance = await crescite.balanceOf(account1.address);
+
+      expect(await staking.userPositionCount(account1.address)).to.equal(0);
+      expect(await staking.userStakingTotals(account1.address)).to.equal(0);
+      expect(await staking.totalStaked()).to.equal(0);
+
+      // calculation of rewards to 4 d.p. in the test is acceptable
+      // we know there's some tiny drift due to block timestamps
+      // the actual value returned by the contract will have higher precision
+      expect(Number(formatEther(endingBalance.sub(startingBalance))).toFixed(4)).to.equal('180.0000');
+    })
+  });
+
+  describe('positionPartialClose()', () => {
+    it('should unstake a portion of a position and create a new position with the remainder', async () => {
+      const fixtures = await loadFixture(deployFixtures);
+
+      const account1 = fixtures.account1;
+      const crescite = fixtures.crescite.connect(account1);
+      const staking = fixtures.staking.connect(account1);
+
+      await crescite.approve(staking.address, big(1500));
+
+      await staking.stakeTokens(big(500));
+      await staking.stakeTokens(big(500));
+      await staking.stakeTokens(big(500));
+
+      const originalPosition = await staking.stakingPositions(account1.address, 0);
+      await mineBlockOneYearLater();
+
+      await staking.positionPartialClose(0, big(250));
+
+      const modifiedPosition = await staking.stakingPositions(account1.address, 2);
+      expect(modifiedPosition.timestamp).to.equal(originalPosition.timestamp);
+      expect(modifiedPosition.amount).to.equal(big(250));
+
+      expect(await staking.userPositionCount(account1.address)).to.equal(3);
+      expect(await staking.userStakingTotals(account1.address)).to.equal(big(1250));
+      expect(await staking.totalStaked()).to.equal(big(1250));
+    });
+  });
+
+  describe('claimPositionRewards()', () => {
+    it('should transfer rewards to user and reset position timestamp', async () => {
+      const fixtures = await loadFixture(deployFixtures);
+
+      const account1 = fixtures.account1;
+      const crescite = fixtures.crescite.connect(account1);
+      const staking = fixtures.staking.connect(account1);
+
+      await crescite.approve(staking.address, big(1500));
+
+      await staking.stakeTokens(big(500));
+      await staking.stakeTokens(big(500));
+      await staking.stakeTokens(big(500));
+
+      const balanceBeforeClaim = await crescite.balanceOf(account1.address);
+
+      // subtract an extra two seconds here to account for the blocks
+      // mined to open the 2nd and 3rd staking positions
+      await time.setNextBlockTimestamp((await time.latest()) + AVG_SECONDS_PER_YEAR - 2);
+
+      await staking.claimPositionRewards(0);
+      const affectedPosition = await staking.stakingPositions(account1.address, 0);
+      const newBalance = await crescite.balanceOf(account1.address);
+
+      // check balance has increased by expected amount of rewards
+      expect(newBalance.sub(balanceBeforeClaim)).to.equal(big(60));
+      expect(affectedPosition.timestamp).to.equal(await time.latest());
+    });
+  });
+
   describe('unstakeTokens()', () => {
     let Staking: StakingTestHarness;
     let Crescite: Crescite;
@@ -486,30 +592,12 @@ describe('Staking', () => {
       expect(balanceAfterUnstaking).to.eq(getExpectedBalance(amountToStake));
     });
 
-    it('should delete user claims when unstaking', async () => {
-      const { staking, account1, crescite } = await loadFixture(deployFixtures);
-      const amountToStake = big(NORMAL_ACCOUNT_STARTING_BALANCE);
-
-      const stakingContract = staking.connect(account1);
-      await crescite.connect(account1).approve(staking.address, amountToStake);
-
-      // stake then unstake one year later
-      await stakingContract.stakeTokens(amountToStake);
-      await nextBlockIsOneYearLater();
-
-      await stakingContract.claimRewards();
-      expect(await stakingContract.userRewardsClaimed(account1.address)).to.eq(big(240));
-
-      await stakingContract.unstakeTokens();
-      expect(await stakingContract.userRewardsClaimed(account1.address)).to.eq(0);
-    });
-
     it('should remove users position count', async () => {
       const { crescite, staking, account1 } = await loadFixture(deployFixtures);
 
       await crescite.connect(account1).approve(staking.address, big(2000));
 
-      const Staking = await staking.connect(account1);
+      const Staking = staking.connect(account1);
 
       await Staking.stakeTokens(big(1000));
       await Staking.stakeTokens(big(1000));
@@ -555,7 +643,6 @@ describe('Staking', () => {
       const expectedRewardsClaimed = big(240);
 
       expect(await crescite.balanceOf(account1.address)).to.eq(expectedRewardsClaimed);
-      expect(await stakingContract.userRewardsClaimed(account1.address)).to.eq(expectedRewardsClaimed);
     });
   });
 

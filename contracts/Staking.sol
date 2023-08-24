@@ -9,6 +9,15 @@ import "hardhat/console.sol";
 import "./Crescite.sol";
 import "./lib/ds-math/math.sol";
 
+/**
+ * Look into
+ * https://safe.global/ and other multi-sig on Solidity
+ * https://docs.openzeppelin.com/contracts/2.x/access-control
+ *
+ * StateV1
+ * StateV2
+ * Transformer
+ */
 contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
   Crescite public token;
 
@@ -32,7 +41,6 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
 
   mapping(address => StakingPosition[]) public stakingPositions;
   mapping(address => uint256) public userStakingTotals;
-  mapping(address => uint256) public userRewardsClaimed;
   mapping(address => uint256) public userPositionCount;
 
   event Staked(address indexed user, uint256 amount);
@@ -56,11 +64,11 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
    * @dev A user can stake multiple times, each time will create a new staking position
    */
   function stakeTokens(uint256 amount) external nonReentrant whenNotPaused {
-    require(amount > 0, "Amount must be greater than zero");
-    require(token.balanceOf(_msgSender()) >= amount, "Insufficient token balance");
-    require(add(totalStaked, amount) <= getStakeLimit(), "Staking pool limit reached");
-
     address user = _msgSender();
+
+    require(amount > 0, "Amount must be greater than zero");
+    require(token.balanceOf(user) >= amount, "Insufficient token balance");
+    require(add(totalStaked, amount) <= getStakeLimit(), "Staking pool limit reached");
 
     // Transfer tokens from user to staking contract
     token.transferFrom(user, address(this), amount);
@@ -86,14 +94,130 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
   }
 
   /**
+   * Calculate rewards for staking position (subtract the amount already claimed for the position)
+   * Transfer original stake to user along with rewards
+   * Delete the position, update user staking totals
+   * Emit Unstaked event
+   */
+  function positionClose(uint256 index) external nonReentrant whenNotPaused {
+    address user = _msgSender();
+
+    require(stakingPositions[user].length > 0, "Unstake: No staking positions");
+    require(index < stakingPositions[user].length, 'closePosition: Index out of range');
+
+    // get the position at the index
+    StakingPosition memory position = stakingPositions[user][index];
+
+    // calculate the rewards for this position
+    uint256 rewards = calculatePositionRewards(position.amount, position.timestamp);
+
+    // Ensure the contract has a sufficient balance to pay rewards
+    require(token.balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
+
+    // delete the position
+    stakingPositions[user] = removeStakingPosition(index, stakingPositions[user]);
+
+    // decrement the number of positions held by user
+    userPositionCount[user] = sub(userPositionCount[user], 1);
+
+    // update user staked total
+    userStakingTotals[user] = sub(userStakingTotals[user], position.amount);
+
+    // update global staked total
+    totalStaked = sub(totalStaked, position.amount);
+
+    // transfer the original stake plus rewards to the user
+    token.transfer(user, add(position.amount, rewards));
+
+    emit Unstaked(user, position.amount, rewards);
+  }
+
+  /**
+   * Calculate rewards for a partial amount of the position using amount specified
+   * Transfer amount specified of original stake to user along with rewards for the amount
+   * Delete the position, update user staking totals
+   * Using the remaining position amount, create a new position with no rewards claimed
+   * Emit Unstaked event
+   */
+  function positionPartialClose(uint256 index, uint amountToUnstake) external nonReentrant whenNotPaused {
+    address user = _msgSender();
+
+    require(stakingPositions[user].length > 0, "Unstake: No staking positions");
+    require(index < stakingPositions[user].length, 'closePosition: Index out of range');
+    require(amountToUnstake < stakingPositions[user][index].amount, "Amount must be less that position");
+
+    // get the position at the index
+    StakingPosition memory position = stakingPositions[user][index];
+
+    // amount to leave staked
+    uint256 remainingAmount = sub(position.amount, amountToUnstake);
+
+    // calculate the rewards for the amount specified
+    uint256 rewards = calculatePositionRewards(amountToUnstake, position.timestamp);
+
+    // Ensure the contract has a sufficient balance to pay rewards
+    require(token.balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
+
+    // delete the position
+    stakingPositions[user] = removeStakingPosition(index, stakingPositions[user]);
+
+    // create new position with remaining amount
+    // but use original position date so rewards for remaining tokens
+    // are calculated from the original time they were staked
+    stakingPositions[user].push(StakingPosition(remainingAmount, position.timestamp));
+
+    // update user staked total
+    userStakingTotals[user] = sub(userStakingTotals[user], amountToUnstake);
+
+    // update global staked total
+    totalStaked = sub(totalStaked, amountToUnstake);
+
+    // transfer the original stake plus rewards to the user
+    token.transfer(user, add(amountToUnstake, rewards));
+
+    emit Unstaked(user, amountToUnstake, rewards);
+  }
+
+  /**
+   * Calculate rewards accrued for the given staking position
+   * Transfer rewards to user
+   * Reset the position timestamp to the current time
+   * Emit Claimed event
+   */
+  function claimPositionRewards(uint256 index) external nonReentrant whenNotPaused {
+    address user = _msgSender();
+
+    require(stakingPositions[user].length > 0, "Claim position rewards: No staking positions");
+    require(index < stakingPositions[user].length, 'Claim position rewards: Index out of range');
+
+    // get the position at the index
+    StakingPosition memory position = stakingPositions[user][index];
+
+    // calculate the rewards for this position
+    uint256 rewards = calculatePositionRewards(position.amount, position.timestamp);
+
+    // Ensure the contract has a sufficient balance to pay rewards
+    require(token.balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
+
+    // reset the position's timestamp to begin accruing rewards from zero
+    stakingPositions[user][index].timestamp = block.timestamp;
+
+    // transfer the rewards to the user
+    token.transfer(user, rewards);
+
+    emit ClaimRewards(user, rewards);
+  }
+
+  /**
    * @notice Calculate the rewards for a staking position
    * @dev Rewards are calculated based on the elapsed time for each staking position held by the user
    * @dev Rewards are calculated based on the APR and the amount staked
    */
   function unstakeTokens() external nonReentrant whenNotPaused {
-    require(stakingPositions[_msgSender()].length > 0, "Unstake: No staking positions");
-
     address user = _msgSender();
+
+    require(stakingPositions[user].length > 0, "Unstake: No staking positions");
+
     uint256 amountStaked = userStakingTotals[user];
     uint256 rewards = getUserRewards(user);
     uint256 amountToTransfer = add(amountStaked, rewards);
@@ -116,9 +240,6 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     // Remove user's staking position count
     delete userPositionCount[user];
 
-    // Remove record of user's rewards claims
-    delete userRewardsClaimed[user];
-
     // Transfer staked tokens from staking contract back to user
     // only *after* zeroing their staked balance to help minimise attack vector
     // @see https://consensys.io/diligence/blog/2019/09/stop-using-soliditys-transfer-now/
@@ -128,7 +249,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
   }
 
   /**
-   * Calculate the user's total rewards to date and transfer them to user
+   * Calculate the user's total rewards to date across all positions and transfer them to user
    * Keep a record of the rewards they have claimed
    */
   function claimRewards() external nonReentrant whenNotPaused {
@@ -142,13 +263,23 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     // Ensure the contract has a sufficient balance to pay rewards
     require(token.balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
 
-    // update the amount user has claimed
-    userRewardsClaimed[user] = add(userRewardsClaimed[user], rewards);
+    // set positions to current timestamp so they begin calculating
+    // rewards from this point in time
+    resetUserPositionTimestamps(user);
 
     // transfer the rewards to the user
     token.transfer(user, rewards);
 
     emit ClaimRewards(user, rewards);
+  }
+
+  /**
+   *
+   */
+  function resetUserPositionTimestamps(address user) internal {
+    for (uint256 i = 0; i < stakingPositions[user].length; i++) {
+      stakingPositions[user][i].timestamp = block.timestamp;
+    }
   }
 
   /**
@@ -242,8 +373,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
       rewards = add(rewards, calculatePositionRewards(amount, timestamp));
     }
 
-    // subtract the amount of claimed rewards from the total earned
-    return sub(rewards, userRewardsClaimed[user]);
+    return rewards;
   }
 
   /**
@@ -309,6 +439,18 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     // Assuming 1 year is 360.25 days in seconds, add 1 to start the year count from 1.
     uint256 currentYear = add(1, (elapsedTime / SECONDS_IN_YEAR));
     return currentYear;
+  }
+
+  function removeStakingPosition(uint256 index, StakingPosition[] storage positions) private returns (StakingPosition[] storage) {
+    require(index < positions.length, "Index out of bounds");
+
+    // Replace the element to remove with the last element
+    positions[index] = positions[positions.length - 1];
+
+    // Pop the last element to remove it
+    positions.pop();
+
+    return positions;
   }
 }
 
