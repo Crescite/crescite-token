@@ -158,13 +158,8 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     // Ensure the contract has a sufficient balance to pay rewards
     require(token.balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
 
-    // delete the position
-    stakingPositions[user] = removeStakingPosition(index, stakingPositions[user]);
-
-    // create new position with remaining amount
-    // but use original position date so rewards for remaining tokens
-    // are calculated from the original time they were staked
-    stakingPositions[user].push(StakingPosition(remainingAmount, position.timestamp));
+    // replace the position with new position for the remaining amount with the original timestamp
+    stakingPositions[user][index] = StakingPosition(remainingAmount, position.timestamp);
 
     // update user staked total
     userStakingTotals[user] = sub(userStakingTotals[user], amountToUnstake);
@@ -176,36 +171,6 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     token.transfer(user, add(amountToUnstake, rewards));
 
     emit Unstaked(user, amountToUnstake, rewards);
-  }
-
-  /**
-   * Calculate rewards accrued for the given staking position
-   * Transfer rewards to user
-   * Reset the position timestamp to the current time
-   * Emit Claimed event
-   */
-  function claimPositionRewards(uint256 index) external nonReentrant whenNotPaused {
-    address user = _msgSender();
-
-    require(stakingPositions[user].length > 0, "Claim position rewards: No staking positions");
-    require(index < stakingPositions[user].length, 'Claim position rewards: Index out of range');
-
-    // get the position at the index
-    StakingPosition memory position = stakingPositions[user][index];
-
-    // calculate the rewards for this position
-    uint256 rewards = calculatePositionRewards(position.amount, position.timestamp);
-
-    // Ensure the contract has a sufficient balance to pay rewards
-    require(token.balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
-
-    // reset the position's timestamp to begin accruing rewards from zero
-    stakingPositions[user][index].timestamp = block.timestamp;
-
-    // transfer the rewards to the user
-    token.transfer(user, rewards);
-
-    emit ClaimRewards(user, rewards);
   }
 
   /**
@@ -444,10 +409,12 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
   function removeStakingPosition(uint256 index, StakingPosition[] storage positions) private returns (StakingPosition[] storage) {
     require(index < positions.length, "Index out of bounds");
 
-    // Replace the element to remove with the last element
-    positions[index] = positions[positions.length - 1];
+    // shift elements to the left (this will delete the item at index)
+    for (uint i = index; i < positions.length - 1; i++) {
+      positions[i] = positions[i + 1];
+    }
 
-    // Pop the last element to remove it
+    // then remove the last entry
     positions.pop();
 
     return positions;

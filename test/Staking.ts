@@ -463,43 +463,13 @@ describe('Staking', () => {
 
       await staking.positionPartialClose(0, big(250));
 
-      const modifiedPosition = await staking.stakingPositions(account1.address, 2);
+      const modifiedPosition = await staking.stakingPositions(account1.address, 0);
       expect(modifiedPosition.timestamp).to.equal(originalPosition.timestamp);
       expect(modifiedPosition.amount).to.equal(big(250));
 
       expect(await staking.userPositionCount(account1.address)).to.equal(3);
       expect(await staking.userStakingTotals(account1.address)).to.equal(big(1250));
       expect(await staking.totalStaked()).to.equal(big(1250));
-    });
-  });
-
-  describe('claimPositionRewards()', () => {
-    it('should transfer rewards to user and reset position timestamp', async () => {
-      const fixtures = await loadFixture(deployFixtures);
-
-      const account1 = fixtures.account1;
-      const crescite = fixtures.crescite.connect(account1);
-      const staking = fixtures.staking.connect(account1);
-
-      await crescite.approve(staking.address, big(1500));
-
-      await staking.stakeTokens(big(500));
-      await staking.stakeTokens(big(500));
-      await staking.stakeTokens(big(500));
-
-      const balanceBeforeClaim = await crescite.balanceOf(account1.address);
-
-      // subtract an extra two seconds here to account for the blocks
-      // mined to open the 2nd and 3rd staking positions
-      await time.setNextBlockTimestamp((await time.latest()) + AVG_SECONDS_PER_YEAR - 2);
-
-      await staking.claimPositionRewards(0);
-      const affectedPosition = await staking.stakingPositions(account1.address, 0);
-      const newBalance = await crescite.balanceOf(account1.address);
-
-      // check balance has increased by expected amount of rewards
-      expect(newBalance.sub(balanceBeforeClaim)).to.equal(big(60));
-      expect(affectedPosition.timestamp).to.equal(await time.latest());
     });
   });
 
