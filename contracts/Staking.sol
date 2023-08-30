@@ -56,6 +56,27 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     APR = apr;
   }
 
+  modifier nonZeroAmount(uint256 amount) {
+    require(amount > 0, "Amount must be greater than zero");
+    _;
+  }
+
+  modifier userBalanceGte(uint256 amount) {
+    require(token.balanceOf(_msgSender()) >= amount, "Insufficient token balance");
+    _;
+  }
+
+  modifier limitNotReached(uint256 amount) {
+    require(add(totalStaked, amount) <= getStakeLimit(), "Staking pool limit reached");
+    _;
+  }
+
+  modifier hasPosition(uint index) {
+    require(stakingPositions[_msgSender()].length > 0, "Unstake: No staking positions");
+    require(index < stakingPositions[_msgSender()].length, 'closePosition: Index out of range');
+    _;
+  }
+
   /**
    * @notice Stake tokens
    * @param amount The amount of tokens to stake
@@ -63,12 +84,8 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
    * @dev The user must have enough tokens to stake
    * @dev A user can stake multiple times, each time will create a new staking position
    */
-  function stakeTokens(uint256 amount) external nonReentrant whenNotPaused {
+  function stakeTokens(uint256 amount) external nonReentrant whenNotPaused nonZeroAmount(amount) userBalanceGte(amount) limitNotReached(amount) {
     address user = _msgSender();
-
-    require(amount > 0, "Amount must be greater than zero");
-    require(token.balanceOf(user) >= amount, "Insufficient token balance");
-    require(add(totalStaked, amount) <= getStakeLimit(), "Staking pool limit reached");
 
     // Transfer tokens from user to staking contract
     token.transferFrom(user, address(this), amount);
@@ -99,11 +116,8 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
    * Delete the position, update user staking totals
    * Emit Unstaked event
    */
-  function positionClose(uint256 index) external nonReentrant whenNotPaused {
+  function positionClose(uint256 index) external nonReentrant whenNotPaused hasPosition(index) {
     address user = _msgSender();
-
-    require(stakingPositions[user].length > 0, "Unstake: No staking positions");
-    require(index < stakingPositions[user].length, 'closePosition: Index out of range');
 
     // get the position at the index
     StakingPosition memory position = stakingPositions[user][index];
@@ -139,11 +153,9 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
    * Using the remaining position amount, create a new position with no rewards claimed
    * Emit Unstaked event
    */
-  function positionPartialClose(uint256 index, uint amountToUnstake) external nonReentrant whenNotPaused {
+  function positionPartialClose(uint256 index, uint amountToUnstake) external nonReentrant whenNotPaused hasPosition(index) {
     address user = _msgSender();
 
-    require(stakingPositions[user].length > 0, "Unstake: No staking positions");
-    require(index < stakingPositions[user].length, 'closePosition: Index out of range');
     require(amountToUnstake < stakingPositions[user][index].amount, "Amount must be less that position");
 
     // get the position at the index
