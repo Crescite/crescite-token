@@ -1,13 +1,15 @@
-
 ![Crescite Logo](./img/Crescite%20logo_transparent%20GOLD%20BROWN_cropped.png)
-# Crescite Token
 
-This is the repository for the [Crescite](https://crescite.org/) Token. 
-Token Tracker: [xdcb5fa33923ec3ff7f4b9ab7b4c20b236d31243f77](https://explorer.xinfin.network/tokens/xdcb5fa33923ec3ff7f4b9ab7b4c20b236d31243f77)
+# Crescite smart contracts
 
-# Design 
+This is the repository for the [Crescite](https://crescite.org/) Token.
+Token
+Tracker: [xdcb5fa33923ec3ff7f4b9ab7b4c20b236d31243f77](https://explorer.xinfin.network/tokens/xdcb5fa33923ec3ff7f4b9ab7b4c20b236d31243f77)
 
-The Crescite token uses industry standard, audited base contracts from [Open Zeppelin](https://www.openzeppelin.com/). The token contract supports the following set of base interfaces: 
+## Crescite
+
+The Crescite token uses industry standard, audited base contracts from [Open Zeppelin](https://www.openzeppelin.com/).
+The token contract supports the following set of base interfaces:
 
 * [Role-based](https://docs.openzeppelin.com/contracts/4.x/access-control#granting-and-revoking) [AccessControl](https://docs.openzeppelin.com/contracts/4.x/api/access)
 * [ERC20](https://docs.openzeppelin.com/contracts/4.x/erc20)
@@ -18,86 +20,211 @@ The Crescite token uses industry standard, audited base contracts from [Open Zep
 * [Permit](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20Permit)
 * [Flash Minting](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20FlashMint)
 
-# License
+## Staking
 
-Crescite is published under the [Apache v2.0](./LICENSE.md) license. 
+The staking contract allows CRE holders to stake tokens and receieve rewards accrued per second at a fixed APR rate.
 
-## Local Dev Setup
+It uses the following math library for arithmetic operations:
+
+* [DSMath](https://github.com/dapphub/ds-math)
+
+It also uses Open Zeppelin base contracts.
+
+* [Context](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/Context.sol)
+* [ReentrancyGuard](https://docs.openzeppelin.com/contracts/4.x/api/security#ReentrancyGuard)
+* [Ownable](https://docs.openzeppelin.com/contracts/4.x/api/access#Ownable)
+* [Pausable](https://docs.openzeppelin.com/contracts/4.x/api/security#Pausable)
+
+### Constructor parameters
+
+* CRE token address
+* APR (e.g. 12)
+
+## License
+
+Crescite is published under the [Apache v2.0](./LICENSE.md) license.
+
+---
+
+# Install
+
+Then run the following to install all dependencies.
+
+    npm install
+
+Install the Hardhat shortcut:
+
+    npm install --global hardhat-shorthand
+
+# Environment
+
+See `.env-example` for guidance on environment config vars.
+
+---
+
+# Development
+
+Local dev stack consists of:
+
+* Hardhat
+* Ethernal
+
+## Accounts
+
+Multiple accounts are configured locally to aid with simulating use of the staking feature by multiple users.
+
+### Local accounts
+
+* Hardhat account 1 (corresponds to Hardhat's default address #1)
+* Hardhat account 2 (corresponds to Hardhat's default address #2)
+* Optional third account (arbitrary address)
+
+### Apothem Network
+
+```
+APOTHEM_NETWORK_URL=https://erpc.apothem.network
+APOTHEM_PRIVATE_KEY=[the private ket for deploying to the Apothem network]
+APOTHEM_TOKEN_CONTRACT=[address of CRE token contract the staking contract should use]
+APOTHEM_STAKING_CONTRACT=[address of latest staking contract version]
+```
+
+### XDC Mainnet
+
+First though ensure your `.env` file is setup on the repo root folder.
 
 In the local directory of this project setup `.env` file with the following content:
 
 ```
-XINFIN_NETWORK_URL=[Either https://erpc.apothem.network or https://erpc.xinfin.network]
+XINFIN_NETWORK_URL=https://erpc.xinfin.network
 XINFIN_PRIVATE_KEY=[the private key for deploying to the XDC network]
+XINFIN_TOKEN_CONTRACT=[address of CRE token contract the staking contract should use]
+XINFIN_STAKING_CONTRACT=[address of latest staking contract version]
 ```
 
-Then run the following to install all dependencies.
+## Run unit tests
 
-```
-npm install
-```
+    hh test
 
-Install the Hardhat shortcut:
+## Running Hardhat node
 
-```
-npm install --global hardhat-shorthand
-```
+    hh node
 
-Set the `TOKEN_CONTRACT` environment variable either in the `.env` file:
+## Ethernal
 
-```.env
-TOKENB_CONTRACT=[token contract address]
-```
+[Ethernal](https://app.tryethernal.com) is a block explorer that can sync with the Hardhat node.
+It runs remotely and syncs via the [`hardhat-ethernal`](https://github.com/tryethernal/hardhat-ethernal) plugin.
 
-or within your shell / CLI:
+### Running Ethernal
 
-```
-export TOKEN_CONTRQACT=[token contract address]
-```
+Ethernal will automatically
 
-## Hardhat Tasks
+### Ethernal and unit tests
+
+Ethernal is disabled when running unit tests.
+
+### Create an Ethernal account
+
+https://app.tryethernal.com
+
+### Login to Ethernal at the CLI
+
+If you install ethernal globally you can run:
+
+    ethernal login
+
+If not, simply run `npx ethernal login`.
+
+### Workspace
+
+Your ethernal workspace will be reset each time you run the Hardhat node.
+This means accounts, balances and smart contracts will all be reset.
+
+To change this edit the `ethernal` options slice of the Hardhat config located at`util/get-hardhat-user-config.ts`.
+
+### Manually push contract changes to ethernal
+
+    hh ethernal-push
+
+## Fixtures
+
+This command performs the following:
+
+* Deploys both `Crescite` and `Staking` contracts to the Hardhat node
+* Mints CRE to local accounts as well as minting rewards tokens
+  to the staking contract address so it can supply rewards.
+* Sync contract artifacts to Ethernal for introspection
+
+        hh dev:init
+
+# Hardhat Tasks
+
+Some tasks target the `Crescite` contract, others target the `Staking` contract.
+
+## Verifying Contracts
+
+There are a number of bugs that remain in the XDC Explorer when dealing with contracts that use base libraries like Open
+Zeppelin.
 
 ## A note about task execution
 
-When executing a task, if you want to target the xinfin network, Apothem or mainnet, you will need to set the network in your `GLOBAL OPTIONS` section:
+When executing a task, if you want to target the xinfin network or Apothem, you will need to set the network in
+your `GLOBAL OPTIONS` section:
 
 ```
 --network xinfin
 ```
 
-### Compilation
+All tasks run against the Hardhat network by default.
+
+## Compilation
 
 ```bash
 hh compile
 ```
 
-### Deployment
+## Staking
 
-```
-hh [GLOBAL OPTIONS] deploy
-```
+### Deploy
+
+    hh [GLOBAL OPTIONS] staking:deploy
+
+### Emergency
+
+> This command requires the staking contract to be paused:
+> `hh staking:pause`
+
+This task will withdraw all CRE from the staking contract to a specified address.
+
+    hh [GLOBAL OPTIONS] staking:emergency --network NETWORK 
+
+Follow the CLI prompts to specify the address.
+
+> Note - This task will likely be deprecated in favour of a multisig approach
+
+### Pause
+
+When the contract is paused, no staking/unstaking/claiming will be allowed
+
+    hh [GLOBAL OPTIONS] staking:pause
+
+### Resume
+
+Will unpause the staking contract and allow all functionality as usual:
+
+    hh [GLOBAL OPTIONS] staking:unpause
+
+## Crescite
+
+    hh [GLOBAL OPTIONS] crescite:deploy
 
 > **Please Note!**
 >
-> The Hardhat configuration uses the environment variable `TOKEN_CONTRACT` to reference the deployed Crescite contract.
+> The Hardhat configuration uses environment variables to reference the deployed Crescite contract
+> according to the network specified in `[GLOBAL OPTIONS]`.
 >
-> You can either set this with
->
-> ```
-> export TOKEN_CONTRACT=[token contract address]
-> ```
-> 
-> Or as part of the deployment (e.g. when working with the Apothem test network)
->
-> ```
-> export TOKEN_CONTRACT=$(hh --network xinfin deploy)
-> ```
->
+> See [Environment](#environment).
 
-### Verifying Contracts
-
-There are a number of bugs that remain in the XDC Explorer when dealing with contracts that use base libraries like Open Zeppelin. 
-### Print Config 
+#### Print Config
 
 ```
 Usage: hh [GLOBAL OPTIONS] print-config
@@ -105,7 +232,7 @@ Usage: hh [GLOBAL OPTIONS] print-config
 print-config: Prints the config
 ```
 
-### Total Supply 
+### Total Supply
 
 ```
 Usage: hh [GLOBAL OPTIONS] total-supply
@@ -138,7 +265,7 @@ OPTIONS:
 mint: Mint tokens
 ```
 
-### Burn 
+### Burn
 
 ```
 Usage: hardhat [GLOBAL OPTIONS] burn --amount <STRING>

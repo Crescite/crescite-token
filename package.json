@@ -4,9 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "compile": "npx hardhat compile --force",
+    "test": "NODE_ENV=test hh test --network hardhat",
     "clean": "hardhat clean",
-    "compile": "npx hardhat compile",
-    "deploy": "hardhat run scripts/deploy.ts --network xinfin"
+    "deploy:crescite:prod": "hardhat run scripts/deploy.ts --network xinfin",
+    "deploy:staking:apothem": "dotenv cross-var hardhat staking:deploy -- --crescite-contract %APOTHEM_TOKEN_CONTRACT% --network apothem"
   },
   "keywords": [],
   "author": "",
@@ -26,18 +28,21 @@
     "@types/chai": "^4.3.3",
     "@types/mocha": "^9.1.1",
     "@types/node": "^18.11.6",
+    "@types/prompts": "^2.4.4",
     "chai": "^4.3.6",
+    "chalk": "^4.1.2",
+    "cross-var": "^1.1.0",
     "dotenv": "^16.0.3",
+    "dotenv-cli": "^7.2.1",
     "ethers": "^5.7.2",
     "hardhat": "^2.12.4",
+    "hardhat-ethernal": "^3.2.0",
     "hardhat-gas-reporter": "^1.0.9",
+    "prompts": "^2.4.2",
     "rimraf": "^3.0.2",
     "solidity-coverage": "^0.8.2",
     "ts-node": "^10.9.1",
     "typechain": "^8.1.1",
     "typescript": "^4.8.4"
-  },
-  "dependencies": {
-    "replace-in-file": "^6.3.5"
   }
 }
