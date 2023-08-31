@@ -50,7 +50,9 @@ Crescite is published under the [Apache v2.0](./LICENSE.md) license.
 
 Then run the following to install all dependencies.
 
-    npm install
+    npm install --legacy-peer-deps
+
+Ethernal has some problematic peer dependencies which is why `--legacy-peer-deps` is required.
 
 Install the Hardhat shortcut:
 
@@ -114,17 +116,19 @@ XINFIN_STAKING_CONTRACT=[address of latest staking contract version]
 [Ethernal](https://app.tryethernal.com) is a block explorer that can sync with the Hardhat node.
 It runs remotely and syncs via the [`hardhat-ethernal`](https://github.com/tryethernal/hardhat-ethernal) plugin.
 
-### Running Ethernal
+### Install
 
-Ethernal will automatically
-
-### Ethernal and unit tests
-
-Ethernal is disabled when running unit tests.
+    npm i -g ethernal
 
 ### Create an Ethernal account
 
-https://app.tryethernal.com
+To create an account go to https://app.tryethernal.com.
+
+Once your account is created you must also create a workspace. Then add the workpace name to your `.env` file:
+
+    ETHERNAL_WORKSPACE=[NAME]
+
+The workspace syncs with the local Hardhat node via the `hardhat-ethernal` plugin.
 
 ### Login to Ethernal at the CLI
 
@@ -132,9 +136,16 @@ If you install ethernal globally you can run:
 
     ethernal login
 
-If not, simply run `npx ethernal login`.
+### Running Ethernal
 
-### Workspace
+Ethernal is accessed via the URL https://app.tryethernal.com, no binaries need to be
+run and Hardhat is configured to push changes to Ethernal automatically.
+
+### Ethernal and unit tests
+
+Ethernal is disabled when running unit tests.
+
+### Workspace auto-reset
 
 Your ethernal workspace will be reset each time you run the Hardhat node.
 This means accounts, balances and smart contracts will all be reset.
@@ -177,6 +188,10 @@ your `GLOBAL OPTIONS` section:
 All tasks run against the Hardhat network by default.
 
 ## Compilation
+
+The [`hardhat-abi-exporter`](https://github.com/ItsNickBarry/hardhat-abi-exporter#readme) plugin is installed which will
+result in ABI files being output to `./abi`. These files are not ignored but published so they can be consumed by
+other repos requiring the contract ABI files.
 
 ```bash
 hh compile
