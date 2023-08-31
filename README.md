@@ -197,6 +197,12 @@ other repos requiring the contract ABI files.
 hh compile
 ```
 
+## Export ABI only
+
+Export ABI files from existing compilation artifacts.
+
+    hh export-abi
+
 ## Staking
 
 ### Deploy
