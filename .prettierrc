@@ -1,25 +1,23 @@
 {
-  "plugins": [
-    "prettier-plugin-solidity"
-  ],
+  "plugins": ["prettier-plugin-solidity"],
   "overrides": [
+    {
+      "files": "*.sol",
+      "options": {
+        "parser": "solidity-parse",
+        "printWidth": 100,
+        "tabWidth": 2,
+        "useTabs": false,
+        "singleQuote": false,
+        "bracketSpacing": false
+      }
+    },
     {
       "files": "*.ts",
       "options": {
         "printWidth": 90,
         "tabWidth": 2,
         "singleQuote": true
-      }
-    },
-    {
-      "files": "*.sol",
-      "options": {
-        "parser": "solidity-parse",
-        "printWidth": 80,
-        "tabWidth": 2,
-        "useTabs": false,
-        "singleQuote": false,
-        "bracketSpacing": false
       }
     }
   ]
