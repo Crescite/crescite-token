@@ -5,10 +5,10 @@ async function main() {
 }
 
 async function deployCrescite() {
-  const Crescite = await ethers.getContractFactory("Crescite");
+  const Crescite = await ethers.getContractFactory('Crescite');
   const crescite = await Crescite.deploy();
   await crescite.deployed();
-  console.log("Crescite contract address:", crescite.address);
+  console.log('Crescite contract address:', crescite.address);
 }
 
 // Call the main function and catch if there is any error

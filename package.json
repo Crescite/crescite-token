@@ -6,8 +6,7 @@
   "scripts": {
     "precompile": "npm run lint",
     "pretest": "npm run lint",
-    "format:check": "prettier . --check",
-    "format:write": "prettier --write --plugin=prettier-plugin-solidity 'contracts/**/*.sol'",
+    "format:check": "prettier . ./contracts/**/*.sol --check",
     "compile": "npx hardhat compile --force",
     "lint": "solhint contracts/**/*.sol",
     "test": "NODE_ENV=test hh test --network hardhat",

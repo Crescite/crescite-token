@@ -29,10 +29,9 @@ const AVG_DAYS_PER_YEAR = 365.25; // average days per year, taking into account 
 const AVG_SECONDS_PER_YEAR = SECONDS_IN_ONE_DAY * AVG_DAYS_PER_YEAR;
 const APR = 12;
 
-const STAKING_REWARDS_ALLOCATION = 13_200_000_000
+const STAKING_REWARDS_ALLOCATION = 13_200_000_000;
 const NORMAL_ACCOUNT_STARTING_BALANCE = 2_000;
 const WHALE_ACCOUNT_STARTING_BALANCE = 4_000_000_000;
-
 
 // ------------------------------------------------------
 
@@ -76,8 +75,11 @@ function big(intValue: number): BigNumber {
  * Deploy the Crescite and Staking contracts and mint some CRE tokens
  */
 async function deployFixtures() {
-  const crescite = await ethers.deployContract('Crescite') as Crescite;
-  const staking = await ethers.deployContract('StakingTestHarness', [crescite.address, APR]) as StakingTestHarness;
+  const crescite = (await ethers.deployContract('Crescite')) as Crescite;
+  const staking = (await ethers.deployContract('StakingTestHarness', [
+    crescite.address,
+    APR,
+  ])) as StakingTestHarness;
 
   // see util/get-hardhat-user-config.ts for the config
   // of the three accounts to be used as signers
@@ -108,7 +110,7 @@ describe('big()', () => {
   it('should convert an integer to a BigNumber of precision 1e18', () => {
     expect(big(100) instanceof ethers.BigNumber).to.be.true;
     expect(big(100).toString()).to.eq('100000000000000000000');
-  })
+  });
 });
 
 // ------------------------------------------------------
@@ -141,8 +143,8 @@ describe('Contract lifetime', () => {
         limit: 3_000_000_000,
         amountToStake: 0,
         rewards: 360_000_000,
-      })
-    ]
+      }),
+    ];
 
     for (let year = 0; year < years.length; year++) {
       const { amountToStake } = years[year];
@@ -162,7 +164,9 @@ describe('Contract lifetime', () => {
 
     // END OF YEAR 38 ---------------------------------------------------------
     // Check rewards at the end of the contract lifetime
-    const totalRewardsEarned = await stakingContract.viewUserStakingRewards(whaleAccount.address);
+    const totalRewardsEarned = await stakingContract.viewUserStakingRewards(
+      whaleAccount.address,
+    );
     const stakingContractBalance = await crescite.balanceOf(stakingContract.address);
 
     // amount of rewards should not exceed the staking contract balance
@@ -187,7 +191,9 @@ describe('Contract lifetime', () => {
 
     // Check rewards at the end of year 39 are just the same as year 38
     // as staking rewards are not issued after year 38
-    const rewardsOneYearLater = await stakingContract.viewUserStakingRewards(whaleAccount.address);
+    const rewardsOneYearLater = await stakingContract.viewUserStakingRewards(
+      whaleAccount.address,
+    );
     expect(totalRewardsEarned.eq(rewardsOneYearLater)).to.be.true;
 
     // Unstake all tokens
@@ -195,9 +201,13 @@ describe('Contract lifetime', () => {
 
     // check whale account balance
     const balance = await crescite.balanceOf(whaleAccount.address);
-    expect(big(WHALE_ACCOUNT_STARTING_BALANCE + 13_200_000_000).sub(balance).lte(acceptableDeviation)).to.be.true;
+    expect(
+      big(WHALE_ACCOUNT_STARTING_BALANCE + 13_200_000_000)
+        .sub(balance)
+        .lte(acceptableDeviation),
+    ).to.be.true;
   });
-})
+});
 
 /**
  * Test the Staking contract
@@ -215,7 +225,9 @@ describe('Staking', () => {
   it('should revert if amount is 0', async () => {
     const { staking } = await loadFixture(deployFixtures);
 
-    await expect(staking.stakeTokens(0)).to.be.revertedWith('Amount must be greater than zero');
+    await expect(staking.stakeTokens(0)).to.be.revertedWith(
+      'Amount must be greater than zero',
+    );
   });
 
   it('should stake tokens', async () => {
@@ -267,7 +279,8 @@ describe('Staking', () => {
   });
 
   it('should keep count of all tokens staked', async () => {
-    const { crescite, staking, account1, whaleAccount } = await loadFixture(deployFixtures);
+    const { crescite, staking, account1, whaleAccount } =
+      await loadFixture(deployFixtures);
 
     await crescite.connect(account1).approve(staking.address, big(2000));
     await crescite.connect(whaleAccount).approve(staking.address, big(2000));
@@ -289,15 +302,11 @@ describe('Staking', () => {
     const { crescite, staking, account1 } = await loadFixture(deployFixtures);
 
     // approve the contract to 'spend' all the CRE tokens minted to account1
-    await crescite
-      .connect(account1)
-      .approve(staking.address, big(2000));
+    await crescite.connect(account1).approve(staking.address, big(2000));
 
-    await expect(
-      staking
-        .connect(account1)
-        .stakeTokens(big(2001))
-    ).to.be.revertedWith('Insufficient token balance')
+    await expect(staking.connect(account1).stakeTokens(big(2001))).to.be.revertedWith(
+      'Insufficient token balance',
+    );
   });
 
   it('should revert if staking pool is full for current year', async () => {
@@ -313,26 +322,30 @@ describe('Staking', () => {
     await stakingContract.stakeTokens(big(500_000_000));
 
     // stake one more token, should be rejected
-    await expect(stakingContract.stakeTokens(big(1))
-    ).to.be.revertedWith('Staking pool limit reached');
+    await expect(stakingContract.stakeTokens(big(1))).to.be.revertedWith(
+      'Staking pool limit reached',
+    );
 
     // --------------------------------------
     // now move on to the second year
     await nextBlockIsOneYearLater();
 
     // stake one token a year later, should be fine
-    await expect(stakingContract.stakeTokens(big(1))
-    ).not.to.be.revertedWith('Staking pool limit reached');
+    await expect(stakingContract.stakeTokens(big(1))).not.to.be.revertedWith(
+      'Staking pool limit reached',
+    );
 
     // Now fill up the remaining allowance for the 2nd year
     // (500_000_001 of 2nd year limit 1_500_000_000 has been staked)
     // (so 999_999_999 is the remaining allowance)
-    await expect(stakingContract.stakeTokens(big(999_999_999))
-    ).not.to.be.revertedWith('Staking pool limit reached');
+    await expect(stakingContract.stakeTokens(big(999_999_999))).not.to.be.revertedWith(
+      'Staking pool limit reached',
+    );
 
     // Now try and stake one more token, should be rejected
-    await expect(stakingContract.stakeTokens(big(1))
-    ).to.be.revertedWith('Staking pool limit reached');
+    await expect(stakingContract.stakeTokens(big(1))).to.be.revertedWith(
+      'Staking pool limit reached',
+    );
 
     // --------------------------------------
     // Now move in to the third year
@@ -340,28 +353,32 @@ describe('Staking', () => {
     await nextBlockIsOneYearLater();
 
     // stake one token another year later, should be fine
-    await expect(stakingContract.stakeTokens(big(1))
-    ).not.to.be.revertedWith('Staking pool limit reached');
+    await expect(stakingContract.stakeTokens(big(1))).not.to.be.revertedWith(
+      'Staking pool limit reached',
+    );
 
     // Now fill up the third year staking pool
     // 1_500_000_001 has been staked so far
-    await expect(stakingContract.stakeTokens(big(1_499_999_999))
-    ).not.to.be.revertedWith('Staking pool limit reached');
+    await expect(stakingContract.stakeTokens(big(1_499_999_999))).not.to.be.revertedWith(
+      'Staking pool limit reached',
+    );
 
     await time.increase(SECONDS_IN_ONE_DAY);
 
     // Now try and stake one more token, should be rejected
     // since the third year limit has been reached
-    await expect(stakingContract.stakeTokens(big(1))
-    ).to.be.revertedWith('Staking pool limit reached');
+    await expect(stakingContract.stakeTokens(big(1))).to.be.revertedWith(
+      'Staking pool limit reached',
+    );
 
     // Now move into the fourth year, everything should be the same
     await mineBlockOneYearLater();
 
     // Now try and stake one more token, should be rejected
     // since the third year limit has been reached
-    await expect(stakingContract.stakeTokens(big(1))
-    ).to.be.revertedWith('Staking pool limit reached');
+    await expect(stakingContract.stakeTokens(big(1))).to.be.revertedWith(
+      'Staking pool limit reached',
+    );
   });
 
   it('should allow staking of full account balance', async () => {
@@ -377,7 +394,8 @@ describe('Staking', () => {
   });
 
   it('should count the number of stakers', async () => {
-    const { crescite, staking, account1, whaleAccount } = await loadFixture(deployFixtures);
+    const { crescite, staking, account1, whaleAccount } =
+      await loadFixture(deployFixtures);
 
     await crescite.connect(account1).approve(staking.address, big(2000));
     await crescite.connect(whaleAccount).approve(staking.address, big(2000));
@@ -425,8 +443,10 @@ describe('Staking', () => {
 
       for (let i = 0; i < 3; i++) {
         const numberOfPositions = await staking.userPositionCount(account1.address);
-        expect(await staking.userStakingTotals(account1.address)).to.equal((big(1500 - (500 * i))));
-        expect(await staking.totalStaked()).to.equal((big(1500 - (500 * i))));
+        expect(await staking.userStakingTotals(account1.address)).to.equal(
+          big(1500 - 500 * i),
+        );
+        expect(await staking.totalStaked()).to.equal(big(1500 - 500 * i));
         expect(numberOfPositions).to.equal(3 - i);
         await staking.positionClose(0);
       }
@@ -440,8 +460,10 @@ describe('Staking', () => {
       // calculation of rewards to 4 d.p. in the test is acceptable
       // we know there's some tiny drift due to block timestamps
       // the actual value returned by the contract will have higher precision
-      expect(Number(formatEther(endingBalance.sub(startingBalance))).toFixed(4)).to.equal('180.0000');
-    })
+      expect(Number(formatEther(endingBalance.sub(startingBalance))).toFixed(4)).to.equal(
+        '180.0000',
+      );
+    });
   });
 
   describe('positionPartialClose()', () => {
@@ -491,7 +513,7 @@ describe('Staking', () => {
       // approve the contract to spend CRE
       await Crescite.connect(account1).approve(Staking.address, big(2000));
       await Crescite.connect(whaleAccount).approve(Staking.address, big(20000000));
-    })
+    });
 
     /**
      * Create a scenario where the given number of tokens are
@@ -501,7 +523,7 @@ describe('Staking', () => {
      * @param amountToStake
      */
     function getExpectedBalance(amountToStake: number) {
-      const expectedRewards = amountToStake * APR / 100;
+      const expectedRewards = (amountToStake * APR) / 100;
       return big(NORMAL_ACCOUNT_STARTING_BALANCE + expectedRewards);
     }
 
@@ -524,7 +546,9 @@ describe('Staking', () => {
       log(`\tStarting balance ${ethers.utils.formatEther(startingBalance)}`);
 
       if (amountToStake.gt(startingBalance)) {
-        throw new Error(`Insufficient balance to stake (balance ${startingBalance}, stake ${amountToStake})`);
+        throw new Error(
+          `Insufficient balance to stake (balance ${startingBalance}, stake ${amountToStake})`,
+        );
       }
 
       // stake tokens
@@ -544,7 +568,11 @@ describe('Staking', () => {
       // get the actual balance after unstaking
       const balanceAfterUnstaking = await Crescite.balanceOf(address);
 
-      log(`\tBalance after staking ${tokenQuantity} for 1 year ${ethers.utils.formatEther(balanceAfterUnstaking)}`);
+      log(
+        `\tBalance after staking ${tokenQuantity} for 1 year ${ethers.utils.formatEther(
+          balanceAfterUnstaking,
+        )}`,
+      );
 
       // return values for comparison inside the test
       return balanceAfterUnstaking;
@@ -588,12 +616,16 @@ describe('Staking', () => {
       const balanceAfterUnstaking = await stakeAndClaim(amountToStake, account1);
 
       // hardcode this expected balance, more precision required than JS can handle
-      expect(ethers.utils.formatEther(balanceAfterUnstaking)).to.eq('2012.014814814681482');
+      expect(ethers.utils.formatEther(balanceAfterUnstaking)).to.eq(
+        '2012.014814814681482',
+      );
     });
 
     it('should work for very large amounts of staked tokens', async () => {
       const balanceAfterUnstaking = await stakeAndClaim(10_000_000, whaleAccount);
-      expect(Number(ethers.utils.formatEther(balanceAfterUnstaking))).to.eq(4_001_200_000);
+      expect(Number(ethers.utils.formatEther(balanceAfterUnstaking))).to.eq(
+        4_001_200_000,
+      );
     });
   });
 
@@ -623,7 +655,7 @@ describe('Staking', () => {
       const stakingContract = staking.connect(account1);
 
       const fakeStakingTimestamp = await time.latest();
-      await time.increaseTo(fakeStakingTimestamp + (AVG_SECONDS_PER_YEAR));
+      await time.increaseTo(fakeStakingTimestamp + AVG_SECONDS_PER_YEAR);
 
       const rewards = await stakingContract
         .connect(account1)
@@ -637,7 +669,9 @@ describe('Staking', () => {
       expect(await calculateRewardsForOneYear(100)).to.eq('12.0');
       expect(await calculateRewardsForOneYear(1)).to.eq('0.12');
 
-      expect(await calculateRewardsForOneYear(1000.123456789012345)).to.eq('120.014814814681488');
+      expect(await calculateRewardsForOneYear(1000.123456789012345)).to.eq(
+        '120.014814814681488',
+      );
       expect(await calculateRewardsForOneYear(0.00001)).to.eq('0.0000012');
     });
   });
@@ -658,7 +692,7 @@ describe('Staking', () => {
       const actual = await stakingContract.viewUserStakingRewards(account1.address);
 
       expect(ethers.utils.formatEther(actual)).to.eq('120.0');
-    })
+    });
   });
 
   describe('viewUserRewardsPerSecond()', () => {
@@ -694,7 +728,7 @@ describe('Staking', () => {
       await time.increaseTo(lastBlockTime + AVG_SECONDS_PER_YEAR * 35);
       await expect(formatEther(await staking.viewStakeLimit())).to.eq('3000000000.0');
     });
-  })
+  });
 
   describe('getCurrentYear()', () => {
     let stakingContract: StakingTestHarness;
@@ -754,7 +788,9 @@ describe('Staking', () => {
 
       await time.increaseTo(fakeCurrentDate);
 
-      expect((await stakingContract.testGetCurrentOrEndTime()).toString()).to.equal(fakeCurrentDate);
+      expect((await stakingContract.testGetCurrentOrEndTime()).toString()).to.equal(
+        fakeCurrentDate,
+      );
     });
 
     it('should return END_DATE when current time is after END_DATE', async () => {
@@ -766,7 +802,9 @@ describe('Staking', () => {
 
       await time.increaseTo(fakeCurrentDate);
 
-      expect((await stakingContract.testGetCurrentOrEndTime()).toString()).to.equal(endDate);
+      expect((await stakingContract.testGetCurrentOrEndTime()).toString()).to.equal(
+        endDate,
+      );
     });
   });
 
@@ -777,14 +815,18 @@ describe('Staking', () => {
 
       await stakingContract.pause();
 
-      await expect(stakingContract.stakeTokens(100)).to.be.revertedWith('Pausable: paused');
+      await expect(stakingContract.stakeTokens(100)).to.be.revertedWith(
+        'Pausable: paused',
+      );
     });
 
     it('should only be callable by contract owner', async () => {
       const { staking, whaleAccount } = await loadFixture(deployFixtures);
       const stakingContract = staking.connect(whaleAccount);
 
-      await expect(stakingContract.pause()).to.be.revertedWith('Ownable: caller is not the owner');
+      await expect(stakingContract.pause()).to.be.revertedWith(
+        'Ownable: caller is not the owner',
+      );
     });
 
     it('should revert if already paused', async () => {
@@ -802,10 +844,14 @@ describe('Staking', () => {
       const stakingContract = staking.connect(account1);
 
       await stakingContract.pause();
-      await expect(stakingContract.stakeTokens(100)).to.be.revertedWith('Pausable: paused');
+      await expect(stakingContract.stakeTokens(100)).to.be.revertedWith(
+        'Pausable: paused',
+      );
 
       await stakingContract.resume();
-      await expect(stakingContract.stakeTokens(100)).not.to.be.revertedWith('Pausable: paused');
+      await expect(stakingContract.stakeTokens(100)).not.to.be.revertedWith(
+        'Pausable: paused',
+      );
     });
 
     it('should not resume if contract is not paused', async () => {
@@ -819,7 +865,9 @@ describe('Staking', () => {
       const { staking, whaleAccount } = await loadFixture(deployFixtures);
       const stakingContract = staking.connect(whaleAccount);
 
-      await expect(stakingContract.resume()).to.be.revertedWith('Ownable: caller is not the owner');
+      await expect(stakingContract.resume()).to.be.revertedWith(
+        'Ownable: caller is not the owner',
+      );
     });
-  })
+  });
 });

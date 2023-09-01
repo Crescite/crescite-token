@@ -16,7 +16,8 @@ export const HARDHAT_NETWORK_URL = process.env.HARDHAT_NETWORK_URL as string;
 // needs to be renamed HARDHAT_ACCOUNT_1_PRIVATE_KEY:
 export const HARDHAT_PRIVATE_KEY = process.env.HARDHAT_PRIVATE_KEY as string;
 
-export const HARDHAT_ACCOUNT_2_PRIVATE_KEY = process.env.HARDHAT_ACCOUNT_2_PRIVATE_KEY as string;
+export const HARDHAT_ACCOUNT_2_PRIVATE_KEY = process.env
+  .HARDHAT_ACCOUNT_2_PRIVATE_KEY as string;
 
 export const APOTHEM_NETWORK_URL = process.env.APOTHEM_NETWORK_URL as string;
 export const APOTHEM_TOKEN_CONTRACT = process.env.APOTHEM_TOKEN_CONTRACT as string;
@@ -32,12 +33,12 @@ export const tokenAddresses: Record<string, string> = {
   localhost: HARDHAT_TOKEN_CONTRACT,
   hardhat: HARDHAT_TOKEN_CONTRACT,
   apothem: APOTHEM_TOKEN_CONTRACT,
-  xinfin: XINFIN_TOKEN_CONTRACT
+  xinfin: XINFIN_TOKEN_CONTRACT,
 };
 
 export const stakingAddresses: Record<string, string> = {
   localhost: HARDHAT_STAKING_CONTRACT,
   hardhat: HARDHAT_STAKING_CONTRACT,
   apothem: APOTHEM_STAKING_CONTRACT,
-  xinfin: XINFIN_STAKING_CONTRACT
+  xinfin: XINFIN_STAKING_CONTRACT,
 };

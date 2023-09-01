@@ -2,7 +2,10 @@ import { task } from 'hardhat/config';
 import { bindToCrescite, xdcAddressToEth } from '../util';
 
 task('has-role', 'Determine if an account has a role')
-  .addParam('role', 'one of the supported roles: DEFAULT_ADMIN_ROLE, SNAPSHOT_ROLE, PAUSER_ROLE, MINTER_ROLE')
+  .addParam(
+    'role',
+    'one of the supported roles: DEFAULT_ADMIN_ROLE, SNAPSHOT_ROLE, PAUSER_ROLE, MINTER_ROLE',
+  )
   .addParam('account', 'XDC account ')
   .setAction(async ({ role, account }, hre) => {
     const crescite = await bindToCrescite(hre);

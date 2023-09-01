@@ -17,16 +17,18 @@ task('staking:deploy', 'Deploys the Staking contract')
       const staking = await Staking.deploy(xdcAddressToEth(cresciteContract), APR);
       await staking.deployed();
 
-      console.log(logSymbol.success, chalk.green(`Staking contract deployed to ${staking.address}`));
+      console.log(
+        logSymbol.success,
+        chalk.green(`Staking contract deployed to ${staking.address}`),
+      );
 
       if (['localhost', 'hardhat'].includes(hre.network.name)) {
         await (hre as any).ethernal.push({
           name: 'Staking',
-          address: staking.address
-        })
+          address: staking.address,
+        });
       }
     } catch (e) {
       console.error(e);
     }
   });
-

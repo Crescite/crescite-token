@@ -20,4 +20,3 @@ import { getHardhatUserConfig } from './util';
 const config: HardhatUserConfig = getHardhatUserConfig();
 
 export default config;
-

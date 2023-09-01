@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "hardhat/console.sol";
 import "./Crescite.sol";
 import "./lib/ds-math/math.sol";
 
@@ -73,7 +72,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
 
   modifier hasPosition(uint index) {
     require(stakingPositions[_msgSender()].length > 0, "Unstake: No staking positions");
-    require(index < stakingPositions[_msgSender()].length, 'closePosition: Index out of range');
+    require(index < stakingPositions[_msgSender()].length, "closePosition: Index out of range");
     _;
   }
 
@@ -84,7 +83,16 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
    * @dev The user must have enough tokens to stake
    * @dev A user can stake multiple times, each time will create a new staking position
    */
-  function stakeTokens(uint256 amount) external nonReentrant whenNotPaused nonZeroAmount(amount) userBalanceGte(amount) limitNotReached(amount) {
+  function stakeTokens(
+    uint256 amount
+  )
+    external
+    nonReentrant
+    whenNotPaused
+    nonZeroAmount(amount)
+    userBalanceGte(amount)
+    limitNotReached(amount)
+  {
     address user = _msgSender();
 
     // Transfer tokens from user to staking contract
@@ -153,10 +161,16 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
    * Using the remaining position amount, create a new position with no rewards claimed
    * Emit Unstaked event
    */
-  function positionPartialClose(uint256 index, uint amountToUnstake) external nonReentrant whenNotPaused hasPosition(index) {
+  function positionPartialClose(
+    uint256 index,
+    uint amountToUnstake
+  ) external nonReentrant whenNotPaused hasPosition(index) {
     address user = _msgSender();
 
-    require(amountToUnstake < stakingPositions[user][index].amount, "Amount must be less that position");
+    require(
+      amountToUnstake < stakingPositions[user][index].amount,
+      "Amount must be less that position"
+    );
 
     // get the position at the index
     StakingPosition memory position = stakingPositions[user][index];
@@ -200,7 +214,10 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     uint256 amountToTransfer = add(amountStaked, rewards);
 
     // Ensure the contract has a sufficient balance to pay
-    require(token.balanceOf(address(this)) >= amountToTransfer, "Insufficient balance to unstake and claim");
+    require(
+      token.balanceOf(address(this)) >= amountToTransfer,
+      "Insufficient balance to unstake and claim"
+    );
 
     // Subtract amount from the user's staked total
     userStakingTotals[user] = sub(userStakingTotals[user], amountStaked);
@@ -232,7 +249,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
   function claimRewards() external nonReentrant whenNotPaused {
     address user = _msgSender();
 
-    require(stakingPositions[user].length > 0, 'Claim rewards: No staking positions');
+    require(stakingPositions[user].length > 0, "Claim rewards: No staking positions");
 
     // calculate user's rewards at this time
     uint256 rewards = getUserRewards(user);
@@ -309,7 +326,10 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
       return 0;
     }
 
-    uint256 rewardsPerYear = wmul(userStakingTotals[user], wdiv(mul(APR, PRECISION), mul(100, PRECISION)));
+    uint256 rewardsPerYear = wmul(
+      userStakingTotals[user],
+      wdiv(mul(APR, PRECISION), mul(100, PRECISION))
+    );
     uint256 rewardsPerSecond = wdiv(rewardsPerYear, mul(SECONDS_IN_YEAR, PRECISION));
 
     return rewardsPerSecond;
@@ -359,7 +379,10 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
    * @param positionTimestamp The timestamp when the stake was made.
    * @return The calculated rewards based on the elapsed time and APR.
    */
-  function calculatePositionRewards(uint256 positionAmount, uint256 positionTimestamp) internal view returns (uint256) {
+  function calculatePositionRewards(
+    uint256 positionAmount,
+    uint256 positionTimestamp
+  ) internal view returns (uint256) {
     // calculate the rewards for a year from the position amount
     uint256 rewardsPerYear = wmul(positionAmount, wdiv(wmul(APR, PRECISION), wmul(100, PRECISION)));
 
@@ -418,7 +441,10 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     return currentYear;
   }
 
-  function removeStakingPosition(uint256 index, StakingPosition[] storage positions) private returns (StakingPosition[] storage) {
+  function removeStakingPosition(
+    uint256 index,
+    StakingPosition[] storage positions
+  ) private returns (StakingPosition[] storage) {
     require(index < positions.length, "Index out of bounds");
 
     // shift elements to the left (this will delete the item at index)
@@ -432,4 +458,3 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     return positions;
   }
 }
-
