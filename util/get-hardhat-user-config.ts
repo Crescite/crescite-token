@@ -14,6 +14,9 @@ import {
 
 export function getHardhatUserConfig(): HardhatUserConfig {
   return {
+    abiExporter: {
+      runOnCompile: true
+    },
     solidity: {
       version: '0.8.17',
       settings: {

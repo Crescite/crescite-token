@@ -4,6 +4,7 @@ import '@openzeppelin/hardhat-upgrades';
 /**
  * Plugins
  */
+import 'hardhat-abi-exporter';
 import 'hardhat-ethernal';
 import { HardhatUserConfig } from 'hardhat/config';
 
