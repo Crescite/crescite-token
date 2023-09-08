@@ -1,0 +1,9 @@
+import './accounts';
+import './balance';
+import './burn';
+import './deploy-crescite';
+import './grant-role';
+import './has-role';
+import './mint';
+import './revoke-role';
+import './total-supply';

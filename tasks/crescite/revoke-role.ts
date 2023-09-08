@@ -1,7 +1,7 @@
 import { task } from 'hardhat/config';
-import { bindToCrescite, xdcAddressToEth } from '../util';
+import { bindToCrescite, xdcAddressToEth } from '../../util';
 
-task('grant-role', 'Add an account to a role')
+task('revoke-role', 'Remove an account from a role')
   .addParam('account', 'XDC account')
   .addParam(
     'role',
@@ -12,8 +12,8 @@ task('grant-role', 'Add an account to a role')
     const address = xdcAddressToEth(account);
 
     const roleBinary = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes(role));
-    const grantRoleTx = await crescite.grantRole(roleBinary, address);
+    const grantRoleTx = await crescite.revokeRole(roleBinary, address);
     await grantRoleTx.wait();
 
-    console.log(`Role ${role} granted to ${account}`);
+    console.log(`Role ${role} has been revoked from account ${account}`);
   });

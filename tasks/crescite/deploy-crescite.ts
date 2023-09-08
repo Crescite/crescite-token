@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { task } from 'hardhat/config';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { logSymbol } from '../util';
+import { logSymbol } from '../../util';
 
 task(
   'crescite:deploy',
@@ -26,6 +26,8 @@ task(
           address: crescite.address,
         });
       }
+
+      return crescite.address;
     } catch (e) {
       console.error(e);
     }

@@ -8,7 +8,7 @@ import {
   getTotalSupply,
   logSymbol,
   xdcAddressToEth,
-} from '../util';
+} from '../../util';
 
 task('mint', 'Mint tokens')
   .addParam('account', 'the address of the account')

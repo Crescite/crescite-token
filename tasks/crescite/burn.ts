@@ -6,7 +6,7 @@ import {
   formatNumberString,
   getBalance,
   getTotalSupply,
-} from '../util';
+} from '../../util';
 
 task('burn', 'Burn tokens in the issuing account')
   .addParam('amount', 'the amount of tokens in the issuing account that will be burnt')

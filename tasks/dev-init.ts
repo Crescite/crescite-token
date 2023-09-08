@@ -20,8 +20,8 @@ task('dev:init', 'Deploy contracts to local network, mint tokens').setAction(
     await hre.run('crescite:deploy', applyNetwork());
     console.log('-----------------------------------');
     await hre.run(
-      'staking:deploy',
-      applyNetwork({ cresciteContract: getTokenContractAddress(hre) }),
+      'staking:deploy:v1',
+      applyNetwork({ tokenAddress: getTokenContractAddress(hre), apr: '12' }),
     );
     console.log('-----------------------------------');
     await hre.run(

@@ -1,5 +1,5 @@
 import { task } from 'hardhat/config';
-import { bindToCrescite, formatNumberString, getTotalSupply } from '../util';
+import { bindToCrescite, formatNumberString, getTotalSupply } from '../../util';
 
 task(
   'total-supply',

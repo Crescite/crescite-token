@@ -116,6 +116,8 @@ XINFIN_STAKING_CONTRACT=[address of latest staking contract version]
 [Ethernal](https://app.tryethernal.com) is a block explorer that can sync with the Hardhat node.
 It runs remotely and syncs via the [`hardhat-ethernal`](https://github.com/tryethernal/hardhat-ethernal) plugin.
 
+Very useful for local development. You can list tokens, contracts, view transactions etc.
+
 ### Install
 
     npm i -g ethernal
@@ -158,14 +160,46 @@ To change this edit the `ethernal` options slice of the Hardhat config located a
 
 ## Fixtures
 
+Deploy contracts and mint some tokens.
+
+### Auto
+
 This command performs the following:
 
-- Deploys both `Crescite` and `Staking` contracts to the Hardhat node
-- Mints CRE to local accounts as well as minting rewards tokens
-  to the staking contract address so it can supply rewards.
-- Sync contract artifacts to Ethernal for introspection
+1. Deploys both `Crescite` and `Staking` contracts to the Hardhat node
+2. Mints CRE to local accounts as well as minting rewards tokens to the staking contract address so it can supply rewards. 
+3. Sync contract artifacts to Ethernal for introspection
 
         hh dev:init
+
+### Manual
+
+After each command the deployed address will be output to `stdout` for copying.
+
+#### Step 1 - Deploy Crescite token contract
+
+    hh crescite:deploy
+
+#### Step 2 - Deploy Staking V1 contract
+
+Specify the token to stake (Crescite) and the staking APR (%):
+
+    // e.g. Crescite is deployed to 0x5FbDB2315678afecb367f032d93F642f64180aa3
+    hh staking:deploy:v1 --token-address 0x5FbDB2315678afecb367f032d93F642f64180aa3 --apr 12
+
+#### Step 3 - Mint token rewards to staking contract
+
+The staking rewards pool is 13.2 billion CRE tokens, so mint that quantity to be held
+in the staking contract:
+
+    // e.g. Staking contract deployed to 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+    hh mint --account 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 --amount 13200000000
+
+#### Step 4 - Mint some tokens to other EOA accounts
+
+For use in testing staking etc.
+
+    hh mint --account <HARDHAT_ACCOUNT_ADDRESS> --amount <QUANTITY>
 
 # Hardhat Tasks
 

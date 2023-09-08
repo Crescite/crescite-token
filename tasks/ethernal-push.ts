@@ -17,7 +17,7 @@ task('ethernal-push').setAction(async (args: any, hre: any) => {
   });
 
   await hre.ethernal.push({
-    name: 'Staking',
+    name: 'Staking_V1',
     address: xdcAddressToEth(HARDHAT_STAKING_CONTRACT),
   });
 });

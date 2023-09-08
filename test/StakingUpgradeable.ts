@@ -3,7 +3,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber } from 'ethers';
 import { formatEther } from 'ethers/lib/utils';
-import hardhat, { ethers } from 'hardhat';
+import hardhat, { ethers, upgrades } from 'hardhat';
 import { Crescite, StakingTestHarness } from '../typechain-types';
 import { log } from './util/log';
 
@@ -76,7 +76,9 @@ function big(intValue: number): BigNumber {
  */
 async function deployFixtures() {
   const crescite = (await ethers.deployContract('Crescite')) as Crescite;
-  const staking = (await ethers.deployContract('StakingTestHarness', [
+  const stakingContract = await ethers.getContractFactory('StakingTestHarness');
+
+  const staking = (await upgrades.deployProxy(stakingContract, [
     crescite.address,
     APR,
   ])) as StakingTestHarness;
@@ -212,8 +214,8 @@ describe('Contract lifetime', () => {
 /**
  * Test the Staking contract
  */
-describe('Staking', () => {
-  describe('Ownership', () => {
+describe('StakingUpgradeable', () => {
+  describe('Ownable', () => {
     it('should be owned by the deploy address', async () => {
       const { staking, account1 } = await loadFixture(deployFixtures);
       const stakingContract = staking.connect(account1);
@@ -404,22 +406,22 @@ describe('Staking', () => {
     const staking2 = staking.connect(whaleAccount);
 
     await staking1.stakeTokens(big(1000));
-    expect(staking.numberOfStakers()).eventually.to.equal(1);
+    expect(staking.viewNumberOfStakers()).eventually.to.equal(1);
 
     await staking2.stakeTokens(big(1000));
-    expect(staking.numberOfStakers()).eventually.to.equal(2);
+    expect(staking.viewNumberOfStakers()).eventually.to.equal(2);
 
     await staking1.stakeTokens(big(1000));
-    expect(staking.numberOfStakers()).eventually.to.equal(2);
+    expect(staking.viewNumberOfStakers()).eventually.to.equal(2);
 
     await staking2.stakeTokens(big(1000));
-    expect(staking.numberOfStakers()).eventually.to.equal(2);
+    expect(staking.viewNumberOfStakers()).eventually.to.equal(2);
 
     await staking1.unstakeTokens();
-    expect(staking.numberOfStakers()).eventually.to.equal(1);
+    expect(staking.viewNumberOfStakers()).eventually.to.equal(1);
 
     await staking2.unstakeTokens();
-    expect(staking.numberOfStakers()).eventually.to.equal(0);
+    expect(staking.viewNumberOfStakers()).eventually.to.equal(0);
   });
 
   describe('positionClose()', () => {
@@ -808,66 +810,68 @@ describe('Staking', () => {
     });
   });
 
-  describe('pause()', () => {
-    it('should pause contract', async () => {
-      const { staking, account1 } = await loadFixture(deployFixtures);
-      const stakingContract = staking.connect(account1);
+  describe('Pausable', () => {
+    describe('pause()', () => {
+      it('should pause contract', async () => {
+        const { staking, account1 } = await loadFixture(deployFixtures);
+        const stakingContract = staking.connect(account1);
 
-      await stakingContract.pause();
+        await stakingContract.pause();
 
-      await expect(stakingContract.stakeTokens(100)).to.be.revertedWith(
-        'Pausable: paused',
-      );
+        await expect(stakingContract.stakeTokens(100)).to.be.revertedWith(
+          'Pausable: paused',
+        );
+      });
+
+      it('should only be callable by contract owner', async () => {
+        const { staking, whaleAccount } = await loadFixture(deployFixtures);
+        const stakingContract = staking.connect(whaleAccount);
+
+        await expect(stakingContract.pause()).to.be.revertedWith(
+          'Ownable: caller is not the owner',
+        );
+      });
+
+      it('should revert if already paused', async () => {
+        const { staking, account1 } = await loadFixture(deployFixtures);
+        const stakingContract = staking.connect(account1);
+
+        await stakingContract.pause();
+        await expect(stakingContract.pause()).to.be.revertedWith('Pausable: paused');
+      });
     });
 
-    it('should only be callable by contract owner', async () => {
-      const { staking, whaleAccount } = await loadFixture(deployFixtures);
-      const stakingContract = staking.connect(whaleAccount);
+    describe('resume()', () => {
+      it('should un-pause contract', async () => {
+        const { staking, account1 } = await loadFixture(deployFixtures);
+        const stakingContract = staking.connect(account1);
 
-      await expect(stakingContract.pause()).to.be.revertedWith(
-        'Ownable: caller is not the owner',
-      );
-    });
+        await stakingContract.pause();
+        await expect(stakingContract.stakeTokens(100)).to.be.revertedWith(
+          'Pausable: paused',
+        );
 
-    it('should revert if already paused', async () => {
-      const { staking, account1 } = await loadFixture(deployFixtures);
-      const stakingContract = staking.connect(account1);
+        await stakingContract.resume();
+        await expect(stakingContract.stakeTokens(100)).not.to.be.revertedWith(
+          'Pausable: paused',
+        );
+      });
 
-      await stakingContract.pause();
-      await expect(stakingContract.pause()).to.be.revertedWith('Pausable: paused');
-    });
-  });
+      it('should not resume if contract is not paused', async () => {
+        const { staking, account1 } = await loadFixture(deployFixtures);
+        const stakingContract = staking.connect(account1);
 
-  describe('resume()', () => {
-    it('should un-pause contract', async () => {
-      const { staking, account1 } = await loadFixture(deployFixtures);
-      const stakingContract = staking.connect(account1);
+        await expect(stakingContract.resume()).to.be.revertedWith('Pausable: not paused');
+      });
 
-      await stakingContract.pause();
-      await expect(stakingContract.stakeTokens(100)).to.be.revertedWith(
-        'Pausable: paused',
-      );
+      it('should only be callable by contract owner', async () => {
+        const { staking, whaleAccount } = await loadFixture(deployFixtures);
+        const stakingContract = staking.connect(whaleAccount);
 
-      await stakingContract.resume();
-      await expect(stakingContract.stakeTokens(100)).not.to.be.revertedWith(
-        'Pausable: paused',
-      );
-    });
-
-    it('should not resume if contract is not paused', async () => {
-      const { staking, account1 } = await loadFixture(deployFixtures);
-      const stakingContract = staking.connect(account1);
-
-      await expect(stakingContract.resume()).to.be.revertedWith('Pausable: not paused');
-    });
-
-    it('should only be callable by contract owner', async () => {
-      const { staking, whaleAccount } = await loadFixture(deployFixtures);
-      const stakingContract = staking.connect(whaleAccount);
-
-      await expect(stakingContract.resume()).to.be.revertedWith(
-        'Ownable: caller is not the owner',
-      );
+        await expect(stakingContract.resume()).to.be.revertedWith(
+          'Ownable: caller is not the owner',
+        );
+      });
     });
   });
 });

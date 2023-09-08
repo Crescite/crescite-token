@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: GNU
 pragma solidity ^0.8.17;
 
-import "./Staking.sol";
+import "../Staking_V1.sol";
 
 /**
  * @notice This contract is used for testing the internal functions of Staking.sol
  */
-contract StakingTestHarness is Staking {
-  constructor(address tokenAddress, uint256 apr) Staking(tokenAddress, apr) {}
-
+contract StakingTestHarness is Staking_V1 {
   function testCalculatePositionRewards(
     uint256 amount,
     uint256 timestamp

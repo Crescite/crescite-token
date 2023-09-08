@@ -1,42 +1,55 @@
-// SPDX-License-Identifier: GNU
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
-import "@openzeppelin/contracts/utils/Context.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./Crescite.sol";
-import "./lib/ds-math/math.sol";
+import "@openzeppelin/contracts/interfaces/IERC20.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "../math/DSMath.sol";
 
 /**
- * Look into
- * https://safe.global/ and other multi-sig on Solidity
- * https://docs.openzeppelin.com/contracts/2.x/access-control
+ * Usage: inherit from this contract and create an initialize() function, e.g.:
  *
- * StateV1
- * StateV2
- * Transformer
+ * function initialize(address tokenAddress, uint apr) public initializer {
+ *    __Staking_init();
+ *    _setToken(Crescite(tokenAddress));
+ *    _setAPR(apr);
+ *  }
  */
-contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
-  Crescite public token;
+abstract contract StakingUpgradeable is
+  Initializable,
+  DSMath,
+  ContextUpgradeable,
+  OwnableUpgradeable,
+  PausableUpgradeable,
+  ReentrancyGuardUpgradeable,
+  UUPSUpgradeable
+{
+  using Counters for Counters.Counter;
 
   struct StakingPosition {
     uint256 amount;
     uint256 timestamp;
   }
 
-  uint256 public totalStaked = 0;
-  uint256 public numberOfStakers = 0;
+  address private _tokenAddress;
+  uint256 private APR;
+
+  uint256 private PRECISION;
+  uint256 private SECONDS_IN_YEAR;
+
+  uint256 private YEAR_1_LIMIT;
+  uint256 private YEAR_2_LIMIT;
+  uint256 private YEARLY_LIMIT;
+
+  Counters.Counter private _numberOfStakers;
+
+  uint256 public totalStaked;
   uint256 public START_DATE;
   uint256 public END_DATE;
-
-  uint256 private APR;
-  uint256 private constant PRECISION = 1e18;
-  uint256 private constant SECONDS_IN_YEAR = 365.25 days; // average days per year (due to leap years)
-
-  uint256 private constant YEAR_1_LIMIT = 500_000_000 * PRECISION;
-  uint256 private constant YEAR_2_LIMIT = 1_500_000_000 * PRECISION;
-  uint256 private constant YEARLY_LIMIT = 3_000_000_000 * PRECISION;
 
   mapping(address => StakingPosition[]) public stakingPositions;
   mapping(address => uint256) public userStakingTotals;
@@ -47,21 +60,66 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
   event ClaimRewards(address indexed user, uint256 rewards);
   event WithdrawFunds(address indexed user, uint256 amount);
 
-  constructor(address tokenAddress, uint256 apr) {
+  function __Staking_init() internal onlyInitializing {
+    __Staking_init_unchained();
+  }
+
+  function __Staking_init_unchained() internal onlyInitializing {
+    __Context_init();
+    __Ownable_init();
+    __Pausable_init();
+    __ReentrancyGuard_init();
+    __UUPSUpgradeable_init();
+
+    PRECISION = 1e18;
+
+    // average days per year (due to leap years)
+    SECONDS_IN_YEAR = 365.25 days;
+
     START_DATE = block.timestamp;
     END_DATE = START_DATE + SECONDS_IN_YEAR * 38;
 
-    token = Crescite(tokenAddress);
+    YEAR_1_LIMIT = 500_000_000 * PRECISION;
+    YEAR_2_LIMIT = 1_500_000_000 * PRECISION;
+    YEARLY_LIMIT = 3_000_000_000 * PRECISION;
+
+    totalStaked = 0;
+  }
+
+  /**
+   * @dev https://docs.openzeppelin.com/contracts/4.x/api/proxy#UUPSUpgradeable
+   *
+   * "The _authorizeUpgrade function must be overridden to
+   * include access restriction to the upgrade mechanism."
+   */
+  function _authorizeUpgrade(address) internal override onlyOwner {}
+
+  /**
+   * --------------------------------------------
+   * Initial setter functions, call these from initializer() function
+   * --------------------------------------------
+   */
+  function _setToken(address tokenAddress) internal onlyOwner {
+    _tokenAddress = tokenAddress;
+
+  }
+
+  function _setAPR(uint apr) internal onlyOwner {
     APR = apr;
   }
 
+  /**
+   * --------------------------------------------
+   * Modifiers
+   * --------------------------------------------
+   */
   modifier nonZeroAmount(uint256 amount) {
     require(amount > 0, "Amount must be greater than zero");
     _;
   }
 
   modifier userBalanceGte(uint256 amount) {
-    require(token.balanceOf(_msgSender()) >= amount, "Insufficient token balance");
+    require(IERC20(_tokenAddress).balanceOf(_msgSender()) >= amount, "Insufficient token balance");
     _;
   }
 
@@ -76,6 +134,11 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     _;
   }
 
+  /**
+   * --------------------------------------------
+   * Staking logic
+   * --------------------------------------------
+   */
   /**
    * @notice Stake tokens
    * @param amount The amount of tokens to stake
@@ -92,11 +155,12 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     nonZeroAmount(amount)
     userBalanceGte(amount)
     limitNotReached(amount)
+    onlyProxy
   {
     address user = _msgSender();
 
     // Transfer tokens from user to staking contract
-    token.transferFrom(user, address(this), amount);
+    IERC20(_tokenAddress).transferFrom(user, address(this), amount);
 
     // Create a new staking position for the amount and block timestamp
     stakingPositions[user].push(StakingPosition(amount, block.timestamp));
@@ -112,7 +176,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
 
     // if first position opened by this user then count them
     if (stakingPositions[user].length == 1) {
-      numberOfStakers = add(numberOfStakers, 1);
+      _numberOfStakers.increment();
     }
 
     emit Staked(user, amount);
@@ -124,7 +188,9 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
    * Delete the position, update user staking totals
    * Emit Unstaked event
    */
-  function positionClose(uint256 index) external nonReentrant whenNotPaused hasPosition(index) {
+  function positionClose(
+    uint256 index
+  ) external nonReentrant onlyProxy whenNotPaused hasPosition(index) {
     address user = _msgSender();
 
     // get the position at the index
@@ -134,7 +200,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     uint256 rewards = calculatePositionRewards(position.amount, position.timestamp);
 
     // Ensure the contract has a sufficient balance to pay rewards
-    require(token.balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
+    require(IERC20(_tokenAddress).balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
 
     // delete the position
     stakingPositions[user] = removeStakingPosition(index, stakingPositions[user]);
@@ -149,7 +215,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     totalStaked = sub(totalStaked, position.amount);
 
     // transfer the original stake plus rewards to the user
-    token.transfer(user, add(position.amount, rewards));
+    IERC20(_tokenAddress).transfer(user, add(position.amount, rewards));
 
     emit Unstaked(user, position.amount, rewards);
   }
@@ -164,7 +230,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
   function positionPartialClose(
     uint256 index,
     uint amountToUnstake
-  ) external nonReentrant whenNotPaused hasPosition(index) {
+  ) external nonReentrant onlyProxy whenNotPaused hasPosition(index) {
     address user = _msgSender();
 
     require(
@@ -182,7 +248,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     uint256 rewards = calculatePositionRewards(amountToUnstake, position.timestamp);
 
     // Ensure the contract has a sufficient balance to pay rewards
-    require(token.balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
+    require(IERC20(_tokenAddress).balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
 
     // replace the position with new position for the remaining amount with the original timestamp
     stakingPositions[user][index] = StakingPosition(remainingAmount, position.timestamp);
@@ -194,17 +260,17 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     totalStaked = sub(totalStaked, amountToUnstake);
 
     // transfer the original stake plus rewards to the user
-    token.transfer(user, add(amountToUnstake, rewards));
+    IERC20(_tokenAddress).transfer(user, add(amountToUnstake, rewards));
 
     emit Unstaked(user, amountToUnstake, rewards);
   }
 
   /**
-   * @notice Calculate the rewards for a staking position
+   * @notice Calculate the rewards for a staking position, transfer all staked + rewards to user
    * @dev Rewards are calculated based on the elapsed time for each staking position held by the user
    * @dev Rewards are calculated based on the APR and the amount staked
    */
-  function unstakeTokens() external nonReentrant whenNotPaused {
+  function unstakeTokens() external nonReentrant onlyProxy whenNotPaused {
     address user = _msgSender();
 
     require(stakingPositions[user].length > 0, "Unstake: No staking positions");
@@ -215,7 +281,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
 
     // Ensure the contract has a sufficient balance to pay
     require(
-      token.balanceOf(address(this)) >= amountToTransfer,
+      IERC20(_tokenAddress).balanceOf(address(this)) >= amountToTransfer,
       "Insufficient balance to unstake and claim"
     );
 
@@ -226,7 +292,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     totalStaked = sub(totalStaked, amountStaked);
 
     // decrement the number of stakers
-    numberOfStakers = sub(numberOfStakers, 1);
+    _numberOfStakers.decrement();
 
     // Remove user's staking entry
     delete stakingPositions[user];
@@ -237,7 +303,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     // Transfer staked tokens from staking contract back to user
     // only *after* zeroing their staked balance to help minimise attack vector
     // @see https://consensys.io/diligence/blog/2019/09/stop-using-soliditys-transfer-now/
-    token.transfer(user, amountToTransfer);
+    IERC20(_tokenAddress).transfer(user, amountToTransfer);
 
     emit Unstaked(user, amountStaked, rewards);
   }
@@ -246,7 +312,7 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
    * Calculate the user's total rewards to date across all positions and transfer them to user
    * Keep a record of the rewards they have claimed
    */
-  function claimRewards() external nonReentrant whenNotPaused {
+  function claimRewards() external nonReentrant onlyProxy whenNotPaused {
     address user = _msgSender();
 
     require(stakingPositions[user].length > 0, "Claim rewards: No staking positions");
@@ -255,14 +321,14 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
     uint256 rewards = getUserRewards(user);
 
     // Ensure the contract has a sufficient balance to pay rewards
-    require(token.balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
+    require(IERC20(_tokenAddress).balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
 
     // set positions to current timestamp so they begin calculating
     // rewards from this point in time
     resetUserPositionTimestamps(user);
 
     // transfer the rewards to the user
-    token.transfer(user, rewards);
+    IERC20(_tokenAddress).transfer(user, rewards);
 
     emit ClaimRewards(user, rewards);
   }
@@ -281,9 +347,9 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
    * withdraw all CRE funds held in the contract.
    */
   function withdrawFunds() external nonReentrant onlyOwner whenPaused {
-    uint256 amount = token.balanceOf(address(this));
+    uint256 amount = IERC20(_tokenAddress).balanceOf(address(this));
 
-    token.transfer(owner(), amount);
+    IERC20(_tokenAddress).transfer(owner(), amount);
     emit WithdrawFunds(owner(), amount);
   }
 
@@ -347,6 +413,10 @@ contract Staking is DSMath, Context, ReentrancyGuard, Ownable, Pausable {
    */
   function viewStakeLimit() external view returns (uint256) {
     return getStakeLimit();
+  }
+
+  function viewNumberOfStakers() external view returns (uint256) {
+    return _numberOfStakers.current();
   }
 
   /**
