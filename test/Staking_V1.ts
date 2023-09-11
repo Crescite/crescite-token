@@ -1,14 +1,15 @@
 import { ethers, upgrades } from 'hardhat';
-import { HARDHAT_TOKEN_CONTRACT } from '../util';
+import { HARDHAT_ACCOUNT_1, HARDHAT_TOKEN_CONTRACT } from '../util';
 
 describe('Staking_V1', function () {
   let proxyAddress: string;
 
   it('deploys', async function () {
+    const escapeHatchDestination = HARDHAT_ACCOUNT_1;
     const contract = await ethers.getContractFactory('Staking_V1');
     const { address } = await upgrades.deployProxy(
       contract,
-      [HARDHAT_TOKEN_CONTRACT, 12],
+      [HARDHAT_TOKEN_CONTRACT, 12, escapeHatchDestination],
       {
         kind: 'uups',
       },
@@ -16,6 +17,10 @@ describe('Staking_V1', function () {
 
     proxyAddress = address;
   });
+
+  it('should grant DEFAULT_ADMIN_ROLE to deploying account', () => {});
+  it('should grant ESCAPE_CALLER_ROLE to deploying account', () => {});
+  it('should only permit account with ESCAPE_CALLER_ROLE to call escapeHatch()', () => {});
 
   /**
    * Uncomment this once Staking_V2 is ready to go if needed

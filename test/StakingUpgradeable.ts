@@ -3,8 +3,9 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber } from 'ethers';
 import { formatEther } from 'ethers/lib/utils';
-import hardhat, { ethers, upgrades } from 'hardhat';
+import hardhat, { ethers, network, upgrades } from 'hardhat';
 import { Crescite, StakingTestHarness } from '../typechain-types';
+import { HARDHAT_ACCOUNT_1 } from '../util';
 import { log } from './util/log';
 
 //
@@ -77,10 +78,12 @@ function big(intValue: number): BigNumber {
 async function deployFixtures() {
   const crescite = (await ethers.deployContract('Crescite')) as Crescite;
   const stakingContract = await ethers.getContractFactory('StakingTestHarness');
+  const escapeHatchDestination = HARDHAT_ACCOUNT_1;
 
   const staking = (await upgrades.deployProxy(stakingContract, [
     crescite.address,
     APR,
+    escapeHatchDestination,
   ])) as StakingTestHarness;
 
   // see util/get-hardhat-user-config.ts for the config
@@ -105,6 +108,12 @@ async function deployFixtures() {
 
   return { crescite, staking, account1, whaleAccount, signers };
 }
+
+// ------------------------------------------------------
+// Reset the hardhat node state
+(async () => {
+  await network.provider.send('hardhat_reset');
+})();
 
 // ------------------------------------------------------
 
