@@ -6,6 +6,7 @@ import { formatEther } from 'ethers/lib/utils';
 import hardhat, { ethers, network, upgrades } from 'hardhat';
 import { Crescite, StakingTestHarness } from '../typechain-types';
 import { HARDHAT_ACCOUNT_1 } from '../util';
+import { big } from './util/big';
 import { log } from './util/log';
 
 //
@@ -63,13 +64,6 @@ async function mineBlockOneYearLaterMinusOneSecond() {
   await time.increaseTo(nextBlockTime - 1);
 }
 
-/**
- * Convert given value to a BigNumber with precision 1e18
- */
-function big(intValue: number): BigNumber {
-  return ethers.utils.parseEther(String(intValue));
-}
-
 // ------------------------------------------------------
 
 /**
@@ -114,15 +108,6 @@ async function deployFixtures() {
 (async () => {
   await network.provider.send('hardhat_reset');
 })();
-
-// ------------------------------------------------------
-
-describe('big()', () => {
-  it('should convert an integer to a BigNumber of precision 1e18', () => {
-    expect(big(100) instanceof ethers.BigNumber).to.be.true;
-    expect(big(100).toString()).to.eq('100000000000000000000');
-  });
-});
 
 // ------------------------------------------------------
 
