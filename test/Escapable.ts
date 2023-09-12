@@ -23,7 +23,7 @@ describe('Escapable', () => {
     await network.provider.send('hardhat_reset');
   });
 
-  it('should send contract tokens to escape hatch address', async () => {
+  it('must send contract tokens to escape hatch address', async () => {
     const { crescite, escapable, owner } = await loadFixture(deployFixtures);
     await crescite.connect(owner).mint(escapable.address, big(1000));
 
@@ -32,7 +32,7 @@ describe('Escapable', () => {
     await expect(crescite.balanceOf(escapable.address)).to.eventually.eq(0);
   });
 
-  it('should emit EscapeHatchCalled event', async () => {
+  it('must emit EscapeHatchCalled event', async () => {
     const { crescite, escapable, owner } = await loadFixture(deployFixtures);
     await crescite.connect(owner).mint(escapable.address, big(1000));
 
@@ -41,7 +41,7 @@ describe('Escapable', () => {
       .withArgs(big(1000));
   });
 
-  it('should revert if signer not set as escape hatch caller', async () => {
+  it('must revert if signer not set as escape hatch caller', async () => {
     const [owner, otherAccount] = await ethers.getSigners();
 
     const { crescite, escapable } = await loadFixture(deployFixtures);
@@ -52,7 +52,7 @@ describe('Escapable', () => {
     );
   });
 
-  it('should reject ETH payments when ERC20 token address being used', async () => {
+  it('must reject ETH payments when ERC20 token address being used', async () => {
     const { escapable, owner } = await loadFixture(deployFixtures);
 
     await expect(
@@ -63,7 +63,7 @@ describe('Escapable', () => {
     ).to.be.revertedWith('Escapable: Cannot receive ETH when baseToken is ERC20');
   });
 
-  it('should change escape hatch caller and emit EscapeHatchCallerChanged event', async () => {
+  it('must change escape hatch caller and emit EscapeHatchCallerChanged event', async () => {
     const [originalCaller, newCaller] = await ethers.getSigners();
     const { escapable } = await loadFixture(deployFixtures);
 
@@ -82,7 +82,7 @@ describe('Escapable', () => {
     );
   });
 
-  it('should deny change of escape hatch caller to non-owner', async () => {
+  it('must deny change of escape hatch caller to non-owner', async () => {
     const [owner, otherAccount] = await ethers.getSigners();
     const { escapable } = await loadFixture(deployFixtures);
 

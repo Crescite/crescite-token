@@ -36,25 +36,25 @@ async function deployFixtures() {
 }
 
 describe('Staking_V1', function () {
-  it('deploys', async () => {
+  it('must deploy', async () => {
     await loadFixture(deployFixtures);
   });
 
-  it('should grant DEFAULT_ADMIN_ROLE to deploying account', async () => {
+  it('must grant DEFAULT_ADMIN_ROLE to deploying account', async () => {
     const { Staking_V1, owner } = await loadFixture(deployFixtures);
 
     await expect(Staking_V1.hasRole(Roles.DEFAULT_ADMIN_ACCOUNT, owner.address))
       .eventually.to.be.true;
   });
 
-  it('should grant ESCAPE_CALLER_ROLE to deploying account', async () => {
+  it('must grant ESCAPE_CALLER_ROLE to deploying account', async () => {
     const { Staking_V1, owner } = await loadFixture(deployFixtures);
 
     await expect(Staking_V1.hasRole(Roles.ESCAPE_CALLER_ROLE, owner.address)).eventually
       .to.be.true;
   });
 
-  it('should only permit account with ESCAPE_CALLER_ROLE to call escapeHatch()', async () => {
+  it('must only permit account with ESCAPE_CALLER_ROLE to call escapeHatch()', async () => {
     const { Staking_V1, owner, otherAccount } = await loadFixture(deployFixtures);
 
     // call with owner account

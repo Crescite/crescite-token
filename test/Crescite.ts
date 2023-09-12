@@ -13,17 +13,17 @@ async function deployFixtures() {
 }
 
 describe('Crescite', () => {
-  it('should not mint any tokens', async () => {
+  it('must not mint any tokens', async () => {
     const { token } = await loadFixture(deployFixtures);
     await expect(token.totalSupply()).eventually.to.equal(0);
   });
 
-  it('should have symbol CRE', async () => {
+  it('must have symbol CRE', async () => {
     const { token } = await loadFixture(deployFixtures);
     await expect(token.symbol()).eventually.to.eq('CRE');
   });
 
-  it('should grant roles to deploying account', async () => {
+  it('must grant roles to deploying account', async () => {
     const { token, owner } = await loadFixture(deployFixtures);
 
     await expect(
@@ -47,21 +47,21 @@ describe('Crescite', () => {
     ).eventually.to.be.true;
   });
 
-  it('should only permit mint() calls from accounts with MINTER_ROLE role', async () => {
+  it('must only permit mint() calls from accounts with MINTER_ROLE role', async () => {
     const { token, otherAccount } = await loadFixture(deployFixtures);
     expect(
       token.connect(otherAccount).mint(otherAccount.address, 1000),
     ).to.be.revertedWith('Fish');
   });
 
-  it('should only permit pause() calls from accounts with PAUSER_ROLE role', async () => {
+  it('must only permit pause() calls from accounts with PAUSER_ROLE role', async () => {
     const { token, otherAccount, owner } = await loadFixture(deployFixtures);
 
     await expect(token.connect(otherAccount).pause()).to.be.reverted;
     await expect(token.connect(owner).pause()).not.to.be.reverted;
   });
 
-  it('should only permit unpause() calls from accounts with PAUSER_ROLE role', async () => {
+  it('must only permit unpause() calls from accounts with PAUSER_ROLE role', async () => {
     const { token, otherAccount, owner } = await loadFixture(deployFixtures);
 
     // pause contract to ensure call to unpause() isn't reverted due to not being paused
@@ -71,14 +71,14 @@ describe('Crescite', () => {
     await expect(token.connect(owner).unpause()).not.to.be.reverted;
   });
 
-  it('should only permit snapshot() calls from accounts with SNAPSHOT_ROLE role', async () => {
+  it('must only permit snapshot() calls from accounts with SNAPSHOT_ROLE role', async () => {
     const { token, otherAccount, owner } = await loadFixture(deployFixtures);
 
     await expect(token.connect(owner).snapshot()).not.to.be.reverted;
     await expect(token.connect(otherAccount).snapshot()).to.be.reverted;
   });
 
-  it('should revert transfers when paused', async () => {
+  it('must revert transfers when paused', async () => {
     const { token, otherAccount, owner } = await loadFixture(deployFixtures);
 
     await token.pause();

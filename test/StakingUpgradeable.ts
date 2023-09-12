@@ -116,7 +116,7 @@ async function deployFixtures() {
  */
 describe('StakingUpgradeable', () => {
   describe('Ownable', () => {
-    it('should be owned by the deploy address', async () => {
+    it('must be owned by the deploy address', async () => {
       const { staking, account1 } = await loadFixture(deployFixtures);
       const stakingContract = staking.connect(account1);
 
@@ -124,7 +124,7 @@ describe('StakingUpgradeable', () => {
     });
   });
 
-  it('should revert if amount is 0', async () => {
+  it('must revert if amount is 0', async () => {
     const { staking } = await loadFixture(deployFixtures);
 
     await expect(staking.stakeTokens(0)).to.be.revertedWith(
@@ -145,7 +145,7 @@ describe('StakingUpgradeable', () => {
     expect(crescite.balanceOf(account1.address)).eventually.to.equal(big(1000));
   });
 
-  it('should store multiple staking positions per user', async () => {
+  it('must store multiple staking positions per user', async () => {
     const { crescite, staking, account1 } = await loadFixture(deployFixtures);
 
     // approve the contract to 'spend' CRE
@@ -166,7 +166,7 @@ describe('StakingUpgradeable', () => {
     expect(crescite.balanceOf(account1.address)).eventually.to.equal(0);
   });
 
-  it('should store count of user positions', async () => {
+  it('must store count of user positions', async () => {
     const { crescite, staking, account1 } = await loadFixture(deployFixtures);
 
     await crescite.connect(account1).approve(staking.address, big(2000));
@@ -180,7 +180,7 @@ describe('StakingUpgradeable', () => {
     expect(staking.userPositionCount(account1.address)).eventually.to.equal(2);
   });
 
-  it('should keep count of all tokens staked', async () => {
+  it('must keep count of all tokens staked', async () => {
     const { crescite, staking, account1, whaleAccount } =
       await loadFixture(deployFixtures);
 
@@ -200,7 +200,7 @@ describe('StakingUpgradeable', () => {
     expect(staking.totalStaked()).eventually.to.equal(0);
   });
 
-  it('should revert if insufficient balance to stake requested amount', async () => {
+  it('must revert if insufficient balance to stake requested amount', async () => {
     const { crescite, staking, account1 } = await loadFixture(deployFixtures);
 
     // approve the contract to 'spend' all the CRE tokens minted to account1
@@ -211,7 +211,7 @@ describe('StakingUpgradeable', () => {
     );
   });
 
-  it('should revert if staking pool is full for current year', async () => {
+  it('must revert if staking pool is full for current year', async () => {
     const { crescite, staking, whaleAccount } = await loadFixture(deployFixtures);
 
     // just approve a very high number for spending
@@ -283,7 +283,7 @@ describe('StakingUpgradeable', () => {
     );
   });
 
-  it('should allow staking of full account balance', async () => {
+  it('must allow staking of full account balance', async () => {
     const { crescite, staking, account1 } = await loadFixture(deployFixtures);
 
     // approve the contract to 'spend' all the CRE tokens minted to account1
@@ -295,7 +295,7 @@ describe('StakingUpgradeable', () => {
     expect(crescite.balanceOf(account1.address)).eventually.to.equal(0);
   });
 
-  it('should count the number of stakers', async () => {
+  it('must count the number of stakers', async () => {
     const { crescite, staking, account1, whaleAccount } =
       await loadFixture(deployFixtures);
 
@@ -325,7 +325,7 @@ describe('StakingUpgradeable', () => {
   });
 
   describe('positionClose()', () => {
-    it('should close a position, update user and global staking totals', async () => {
+    it('must close a position, update user and global staking totals', async () => {
       const fixtures = await loadFixture(deployFixtures);
 
       const account1 = fixtures.account1;
@@ -369,7 +369,7 @@ describe('StakingUpgradeable', () => {
   });
 
   describe('positionPartialClose()', () => {
-    it('should unstake a portion of a position and create a new position with the remainder', async () => {
+    it('must unstake a portion of a position and create a new position with the remainder', async () => {
       const fixtures = await loadFixture(deployFixtures);
 
       const account1 = fixtures.account1;
@@ -485,14 +485,14 @@ describe('StakingUpgradeable', () => {
      * account1: 2000 CRE
      * whaleAccount: 20,000,000 CRE
      */
-    it('should transfer original stake plus rewards to user', async () => {
+    it('must transfer original stake plus rewards to user', async () => {
       const amountToStake = 1000;
       const balanceAfterUnstaking = await stakeAndClaim(amountToStake, account1);
 
       expect(balanceAfterUnstaking).to.eq(getExpectedBalance(amountToStake));
     });
 
-    it('should remove users position count', async () => {
+    it('must remove users position count', async () => {
       const { crescite, staking, account1 } = await loadFixture(deployFixtures);
 
       await crescite.connect(account1).approve(staking.address, big(2000));
@@ -506,14 +506,14 @@ describe('StakingUpgradeable', () => {
       expect(staking.userPositionCount(account1.address)).eventually.to.equal(0);
     });
 
-    it('should work for small amounts of staked token', async () => {
+    it('must handle smaller quantities', async () => {
       const amountToStake = 1.5;
       const balanceAfterUnstaking = await stakeAndClaim(1.5, account1);
 
       expect(balanceAfterUnstaking).to.eq(getExpectedBalance(amountToStake));
     });
 
-    it('should work for very precise amounts of staked token', async () => {
+    it('must correctly stake a quantity with large precision', async () => {
       const amountToStake = 100.123456789012345;
       const balanceAfterUnstaking = await stakeAndClaim(amountToStake, account1);
 
@@ -523,7 +523,7 @@ describe('StakingUpgradeable', () => {
       );
     });
 
-    it('should work for very large amounts of staked tokens', async () => {
+    it('must work for very large amounts of staked tokens', async () => {
       const balanceAfterUnstaking = await stakeAndClaim(10_000_000, whaleAccount);
       expect(Number(ethers.utils.formatEther(balanceAfterUnstaking))).to.eq(
         4_001_200_000,
@@ -532,7 +532,7 @@ describe('StakingUpgradeable', () => {
   });
 
   describe('claimRewards()', () => {
-    it('should transfer rewards to user', async () => {
+    it('must transfer rewards to user', async () => {
       const { staking, account1, crescite } = await loadFixture(deployFixtures);
       const amountToStake = big(NORMAL_ACCOUNT_STARTING_BALANCE);
 
@@ -566,7 +566,7 @@ describe('StakingUpgradeable', () => {
       return ethers.utils.formatEther(rewards);
     }
 
-    it('should calculate rewards for a given position', async () => {
+    it('must calculate rewards for a given position', async () => {
       expect(await calculateRewardsForOneYear(1000)).to.eq('120.0');
       expect(await calculateRewardsForOneYear(100)).to.eq('12.0');
       expect(await calculateRewardsForOneYear(1)).to.eq('0.12');
@@ -579,7 +579,7 @@ describe('StakingUpgradeable', () => {
   });
 
   describe('viewUserStakingRewards()', () => {
-    it('should return rewards accrued to date for the given address', async () => {
+    it('must return rewards accrued to date for the given address', async () => {
       const { staking, account1, crescite } = await loadFixture(deployFixtures);
 
       // approve the staking contract to spend 1000 CRE
@@ -598,7 +598,7 @@ describe('StakingUpgradeable', () => {
   });
 
   describe('viewUserRewardsPerSecond()', () => {
-    it('should return rewards per second based on user staking positions', async () => {
+    it('must return rewards per second based on user staking positions', async () => {
       const { staking, account1, crescite } = await loadFixture(deployFixtures);
 
       // approve the staking contract to spend 1000 CRE
@@ -614,21 +614,21 @@ describe('StakingUpgradeable', () => {
   });
 
   describe('viewStakeLimit()', () => {
-    it('should return staking limit according to current year of contract', async () => {
+    it('must return staking limit according to current year of contract', async () => {
       const { staking } = await loadFixture(deployFixtures);
 
       const limit = await staking.viewStakeLimit();
       expect(formatEther(limit)).to.eq('500000000.0');
 
       await mineBlockOneYearLater();
-      await expect(formatEther(await staking.viewStakeLimit())).to.eq('1500000000.0');
+      expect(formatEther(await staking.viewStakeLimit())).to.eq('1500000000.0');
 
       await mineBlockOneYearLater();
-      await expect(formatEther(await staking.viewStakeLimit())).to.eq('3000000000.0');
+      expect(formatEther(await staking.viewStakeLimit())).to.eq('3000000000.0');
 
       const lastBlockTime = await getLatestBlockTimestamp();
       await time.increaseTo(lastBlockTime + AVG_SECONDS_PER_YEAR * 35);
-      await expect(formatEther(await staking.viewStakeLimit())).to.eq('3000000000.0');
+      expect(formatEther(await staking.viewStakeLimit())).to.eq('3000000000.0');
     });
   });
 
@@ -649,39 +649,39 @@ describe('StakingUpgradeable', () => {
     });
 
     // Test scenarios
-    it('should return current year as 1 on 1 day after start timestamp', async function () {
+    it('must return current year as 1 on 1 day after start timestamp', async function () {
       await increaseTimeBy(SECONDS_IN_ONE_DAY);
       expect(await stakingContract.testGetCurrentYear()).to.equal(1);
     });
 
-    it('should return current year as 1 on 365 days after start timestamp (1 second before midnight)', async function () {
+    it('must return current year as 1 on 365 days after start timestamp (1 second before midnight)', async function () {
       await increaseTimeBy(AVG_SECONDS_PER_YEAR - 1);
       expect(await stakingContract.testGetCurrentYear()).to.equal(1);
     });
 
-    it('should return current year as 2 on the first day of the second year', async function () {
+    it('must return current year as 2 on the first day of the second year', async function () {
       await increaseTimeBy(AVG_SECONDS_PER_YEAR);
       expect(await stakingContract.testGetCurrentYear()).to.equal(2);
     });
 
-    it('should return current year as 10 on the first day of the tenth year', async function () {
+    it('must return current year as 10 on the first day of the tenth year', async function () {
       await increaseTimeBy(AVG_SECONDS_PER_YEAR * 10 - 1);
       expect(await stakingContract.testGetCurrentYear()).to.equal(10);
     });
 
-    it('should return current year as 38 on the first day of the thirty-eighth year', async function () {
+    it('must return current year as 38 on the first day of the thirty-eighth year', async function () {
       await increaseTimeBy(AVG_SECONDS_PER_YEAR * 38 - 1);
       expect(await stakingContract.testGetCurrentYear()).to.equal(38);
     });
 
-    it('should return current year as 39 on the first day of the thirty-ninth year', async function () {
+    it('must return current year as 39 on the first day of the thirty-ninth year', async function () {
       await increaseTimeBy(AVG_SECONDS_PER_YEAR * 39 - 1);
       expect(await stakingContract.testGetCurrentYear()).to.equal(39);
     });
   });
 
   describe('getCurrentOrEndTime()', () => {
-    it('should return the current time when it is before END_DATE', async () => {
+    it('must return the current time when it is before END_DATE', async () => {
       const { staking, account1 } = await loadFixture(deployFixtures);
       const stakingContract = staking.connect(account1);
 
@@ -695,7 +695,7 @@ describe('StakingUpgradeable', () => {
       );
     });
 
-    it('should return END_DATE when current time is after END_DATE', async () => {
+    it('must return END_DATE when current time is after END_DATE', async () => {
       const { staking, account1 } = await loadFixture(deployFixtures);
       const stakingContract = staking.connect(account1);
 
@@ -723,7 +723,7 @@ describe('StakingUpgradeable', () => {
         );
       });
 
-      it('should only be callable by contract owner', async () => {
+      it('must only be callable by contract owner', async () => {
         const { staking, whaleAccount } = await loadFixture(deployFixtures);
         const stakingContract = staking.connect(whaleAccount);
 
@@ -732,7 +732,7 @@ describe('StakingUpgradeable', () => {
         );
       });
 
-      it('should revert if already paused', async () => {
+      it('must revert if already paused', async () => {
         const { staking, account1 } = await loadFixture(deployFixtures);
         const stakingContract = staking.connect(account1);
 
@@ -757,14 +757,14 @@ describe('StakingUpgradeable', () => {
         );
       });
 
-      it('should not resume if contract is not paused', async () => {
+      it('must not resume if contract is not paused', async () => {
         const { staking, account1 } = await loadFixture(deployFixtures);
         const stakingContract = staking.connect(account1);
 
         await expect(stakingContract.resume()).to.be.revertedWith('Pausable: not paused');
       });
 
-      it('should only be callable by contract owner', async () => {
+      it('must only be callable by contract owner', async () => {
         const { staking, whaleAccount } = await loadFixture(deployFixtures);
         const stakingContract = staking.connect(whaleAccount);
 
