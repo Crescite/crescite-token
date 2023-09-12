@@ -21,7 +21,11 @@ task('dev:init', 'Deploy contracts to local network, mint tokens').setAction(
     console.log('-----------------------------------');
     await hre.run(
       'staking:deploy:v1',
-      applyNetwork({ tokenAddress: getTokenContractAddress(hre), apr: '12' }),
+      applyNetwork({
+        tokenAddress: getTokenContractAddress(hre),
+        apr: '12',
+        escapeHatchDestination: HARDHAT_ACCOUNT_1,
+      }),
     );
     console.log('-----------------------------------');
     await hre.run(

@@ -101,6 +101,19 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "viewEscapeHatchDestination",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "stateMutability": "payable",
     "type": "receive"
   }

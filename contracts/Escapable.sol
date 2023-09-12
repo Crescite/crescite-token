@@ -121,6 +121,10 @@ abstract contract Escapable is Initializable {
     }
   }
 
+  function viewEscapeHatchDestination() public view returns (address) {
+    return _escapeHatchDestination;
+  }
+
   /*
    * Receive Ether
    *
