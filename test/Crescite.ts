@@ -2,7 +2,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { Crescite } from '../typechain-types';
-import { toKeccak256 } from './util/to-keccak-256';
+import { Roles } from './util/roles';
 
 async function deployFixtures() {
   const [owner, otherAccount] = await ethers.getSigners();
@@ -26,23 +26,25 @@ describe('Crescite', () => {
   it('should grant roles to deploying account', async () => {
     const { token, owner } = await loadFixture(deployFixtures);
 
-    async function hasRole(roleName: string) {
-      return token.hasRole(toKeccak256(roleName), owner.address);
-    }
-
     await expect(
-      token.hasRole(
-        '0x0000000000000000000000000000000000000000000000000000000000000000',
-        owner.address,
-      ),
+      token.hasRole(Roles.DEFAULT_ADMIN_ACCOUNT, owner.address),
       'DEFAULT_ADMIN_ROLE not granted',
     ).eventually.to.be.true;
 
-    await expect(hasRole('SNAPSHOT_ROLE'), 'SNAPSHOT_ROLE not granted').eventually.to.be
-      .true;
+    await expect(
+      token.hasRole(Roles.SNAPSHOT_ROLE, owner.address),
+      'SNAPSHOT_ROLE not granted',
+    ).eventually.to.be.true;
 
-    await expect(hasRole('PAUSER_ROLE'), 'PAUSER_ROLE not granted').eventually.to.be.true;
-    await expect(hasRole('MINTER_ROLE'), 'MINTER_ROLE not granted').eventually.to.be.true;
+    await expect(
+      token.hasRole(Roles.PAUSER_ROLE, owner.address),
+      'PAUSER_ROLE not granted',
+    ).eventually.to.be.true;
+
+    await expect(
+      token.hasRole(Roles.MINTER_ROLE, owner.address),
+      'MINTER_ROLE not granted',
+    ).eventually.to.be.true;
   });
 
   it('should only permit mint() calls from accounts with MINTER_ROLE role', async () => {

@@ -81,4 +81,14 @@ describe('Escapable', () => {
       'Escapable: not permitted',
     );
   });
+
+  it('should deny change of escape hatch caller to non-owner', async () => {
+    const [owner, otherAccount] = await ethers.getSigners();
+    const { escapable } = await loadFixture(deployFixtures);
+
+    // try to call escape hatch with originally set caller, should reject
+    await expect(
+      escapable.connect(otherAccount).changeEscapeHatchCaller(otherAccount.address),
+    ).to.be.revertedWith('Escapable: not permitted');
+  });
 });

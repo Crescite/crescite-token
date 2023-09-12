@@ -21,7 +21,7 @@ contract Staking_V1 is StakingUpgradeable, Escapable, AccessControlUpgradeable {
     _setAPR(apr);
   }
 
-  function _beforeEscapeHatch(address caller) internal override onlyRole(ESCAPE_CALLER_ROLE) {
+  function _beforeEscapeHatch(address caller) internal virtual override onlyRole(ESCAPE_CALLER_ROLE) {
     super._beforeEscapeHatch(caller);
   }
 }
