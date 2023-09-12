@@ -111,100 +111,6 @@ async function deployFixtures() {
 
 // ------------------------------------------------------
 
-describe('Contract lifetime', () => {
-  it('should pay out 13.2b CRE in rewards to maximum amount staked over 38 years', async () => {
-    const { staking, crescite, whaleAccount } = await loadFixture(deployFixtures);
-    const stakingContract = staking.connect(whaleAccount);
-
-    // approve maximum spend needed for this test
-    await crescite.connect(whaleAccount).approve(staking.address, big(10_000_000_000));
-
-    const years = [
-      {
-        limit: 500_000_000,
-        amountToStake: 500_000_000,
-        rewards: 60_000_000,
-      },
-      {
-        limit: 1_500_000_000,
-        amountToStake: 1_000_000_000,
-        rewards: 180_000_000,
-      },
-      {
-        limit: 3_000_000_000,
-        amountToStake: 1_500_000_000,
-        rewards: 360_000_000,
-      },
-      ...Array(35).fill({
-        limit: 3_000_000_000,
-        amountToStake: 0,
-        rewards: 360_000_000,
-      }),
-    ];
-
-    for (let year = 0; year < years.length; year++) {
-      const { amountToStake } = years[year];
-
-      if (amountToStake > 0) {
-        await stakingContract.stakeTokens(big(amountToStake));
-
-        // advance one year, but as the staking action caused a block to be mined
-        // which advanced the chain by 1 second, advance the chain one second *less* than one year
-        await mineBlockOneYearLaterMinusOneSecond();
-      } else {
-        // advance chain one year
-        // we need to mine a block so the next contract call has a new timestamp to work with
-        await mineBlockOneYearLater();
-      }
-    }
-
-    // END OF YEAR 38 ---------------------------------------------------------
-    // Check rewards at the end of the contract lifetime
-    const totalRewardsEarned = await stakingContract.viewUserStakingRewards(
-      whaleAccount.address,
-    );
-    const stakingContractBalance = await crescite.balanceOf(stakingContract.address);
-
-    // amount of rewards should not exceed the staking contract balance
-    // as the staking contract should always have enough to cover rewards
-    expect(totalRewardsEarned.lte(stakingContractBalance)).to.be.true;
-
-    // expect total rewards earned in lifetime of contract to be correct
-    // according to the staking schedule
-    const expectedRewards = big(13_200_000_000);
-    const diff = expectedRewards.sub(totalRewardsEarned);
-
-    // 80 CRE tokens deviation is acceptable over a 38-year period
-    // accounting for non-deterministic nature of block timestamps and leap seconds
-    const acceptableDeviation = big(80);
-
-    expect(diff.lte(acceptableDeviation)).to.be.true;
-
-    // CHECK YEAR 39 ---------------------------------------------------------
-    // Now one year later, rewards should be the *same* as
-    // rewards will no longer be paid out after year 38
-    await mineBlockOneYearLater();
-
-    // Check rewards at the end of year 39 are just the same as year 38
-    // as staking rewards are not issued after year 38
-    const rewardsOneYearLater = await stakingContract.viewUserStakingRewards(
-      whaleAccount.address,
-    );
-    expect(totalRewardsEarned.eq(rewardsOneYearLater)).to.be.true;
-
-    // Unstake all tokens
-    await stakingContract.unstakeTokens();
-
-    // check whale account balance
-    const balance = await crescite.balanceOf(whaleAccount.address);
-    expect(
-      big(WHALE_ACCOUNT_STARTING_BALANCE + 13_200_000_000)
-        .sub(balance)
-        .lte(acceptableDeviation),
-    ).to.be.true;
-  });
-});
-
 /**
  * Test the Staking contract
  */
@@ -866,6 +772,100 @@ describe('StakingUpgradeable', () => {
           'Ownable: caller is not the owner',
         );
       });
+    });
+  });
+
+  describe('Contract lifetime', () => {
+    it('should pay out 13.2b CRE in rewards to maximum amount staked over 38 years', async () => {
+      const { staking, crescite, whaleAccount } = await loadFixture(deployFixtures);
+      const stakingContract = staking.connect(whaleAccount);
+
+      // approve maximum spend needed for this test
+      await crescite.connect(whaleAccount).approve(staking.address, big(10_000_000_000));
+
+      const years = [
+        {
+          limit: 500_000_000,
+          amountToStake: 500_000_000,
+          rewards: 60_000_000,
+        },
+        {
+          limit: 1_500_000_000,
+          amountToStake: 1_000_000_000,
+          rewards: 180_000_000,
+        },
+        {
+          limit: 3_000_000_000,
+          amountToStake: 1_500_000_000,
+          rewards: 360_000_000,
+        },
+        ...Array(35).fill({
+          limit: 3_000_000_000,
+          amountToStake: 0,
+          rewards: 360_000_000,
+        }),
+      ];
+
+      for (let year = 0; year < years.length; year++) {
+        const { amountToStake } = years[year];
+
+        if (amountToStake > 0) {
+          await stakingContract.stakeTokens(big(amountToStake));
+
+          // advance one year, but as the staking action caused a block to be mined
+          // which advanced the chain by 1 second, advance the chain one second *less* than one year
+          await mineBlockOneYearLaterMinusOneSecond();
+        } else {
+          // advance chain one year
+          // we need to mine a block so the next contract call has a new timestamp to work with
+          await mineBlockOneYearLater();
+        }
+      }
+
+      // END OF YEAR 38 ---------------------------------------------------------
+      // Check rewards at the end of the contract lifetime
+      const totalRewardsEarned = await stakingContract.viewUserStakingRewards(
+        whaleAccount.address,
+      );
+      const stakingContractBalance = await crescite.balanceOf(stakingContract.address);
+
+      // amount of rewards should not exceed the staking contract balance
+      // as the staking contract should always have enough to cover rewards
+      expect(totalRewardsEarned.lte(stakingContractBalance)).to.be.true;
+
+      // expect total rewards earned in lifetime of contract to be correct
+      // according to the staking schedule
+      const expectedRewards = big(13_200_000_000);
+      const diff = expectedRewards.sub(totalRewardsEarned);
+
+      // 80 CRE tokens deviation is acceptable over a 38-year period
+      // accounting for non-deterministic nature of block timestamps and leap seconds
+      const acceptableDeviation = big(80);
+
+      expect(diff.lte(acceptableDeviation)).to.be.true;
+
+      // CHECK YEAR 39 ---------------------------------------------------------
+      // Now one year later, rewards should be the *same* as
+      // rewards will no longer be paid out after year 38
+      await mineBlockOneYearLater();
+
+      // Check rewards at the end of year 39 are just the same as year 38
+      // as staking rewards are not issued after year 38
+      const rewardsOneYearLater = await stakingContract.viewUserStakingRewards(
+        whaleAccount.address,
+      );
+      expect(totalRewardsEarned.eq(rewardsOneYearLater)).to.be.true;
+
+      // Unstake all tokens
+      await stakingContract.unstakeTokens();
+
+      // check whale account balance
+      const balance = await crescite.balanceOf(whaleAccount.address);
+      expect(
+        big(WHALE_ACCOUNT_STARTING_BALANCE + 13_200_000_000)
+          .sub(balance)
+          .lte(acceptableDeviation),
+      ).to.be.true;
     });
   });
 });
