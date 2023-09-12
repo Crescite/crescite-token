@@ -83,7 +83,7 @@ abstract contract Escapable is Initializable {
    *  `escapeHatchDestination` it would be ideal that `escapeHatchCaller` cannot
    *  move funds out of `escapeHatchDestination`
    */
-  function changeEscapeHatchCaller(address _newEscapeHatchCaller) external onlyEscapeHatchCaller {
+  function changeEscapeHatchCaller(address _newEscapeHatchCaller) public onlyEscapeHatchCaller {
     _escapeHatchCaller = _newEscapeHatchCaller;
     emit EscapeHatchCallerChanged(_escapeHatchCaller);
   }

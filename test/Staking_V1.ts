@@ -12,7 +12,7 @@ async function deployFixtures() {
   const crescite = (await ethers.deployContract('Crescite', owner)) as Crescite;
   await crescite.deployed();
 
-  const contractFactory = await ethers.getContractFactory('Staking_V1');
+  const contractFactory = await ethers.getContractFactory('Staking_V1', owner);
   const escapeHatchDestination = HARDHAT_ACCOUNT_1;
   const contractInitialiseParams = [crescite.address, 12, escapeHatchDestination];
 
@@ -28,7 +28,7 @@ async function deployFixtures() {
 
   return {
     proxyAddress: contract.address,
-    Staking_V1: contract,
+    Staking_V1: contract.connect(owner),
     owner,
     otherAccount,
     crescite,
@@ -40,30 +40,71 @@ describe('Staking_V1', function () {
     await loadFixture(deployFixtures);
   });
 
-  it('must grant DEFAULT_ADMIN_ROLE to deploying account', async () => {
-    const { Staking_V1, owner } = await loadFixture(deployFixtures);
+  describe('initialize()', () => {
+    it('must grant DEFAULT_ADMIN_ROLE to deploying account', async () => {
+      const { Staking_V1, owner } = await loadFixture(deployFixtures);
 
-    await expect(Staking_V1.hasRole(Roles.DEFAULT_ADMIN_ACCOUNT, owner.address))
-      .eventually.to.be.true;
-  });
+      await expect(Staking_V1.hasRole(Roles.DEFAULT_ADMIN_ACCOUNT, owner.address))
+        .eventually.to.be.true;
+    });
 
-  it('must grant ESCAPE_CALLER_ROLE to deploying account', async () => {
-    const { Staking_V1, owner } = await loadFixture(deployFixtures);
+    it('must grant ESCAPE_CALLER_ROLE to deploying account', async () => {
+      const { Staking_V1, owner } = await loadFixture(deployFixtures);
 
-    await expect(Staking_V1.hasRole(Roles.ESCAPE_CALLER_ROLE, owner.address)).eventually
-      .to.be.true;
+      await expect(Staking_V1.hasRole(Roles.ESCAPE_CALLER_ROLE, owner.address)).eventually
+        .to.be.true;
+    });
   });
 
   it('must only permit account with ESCAPE_CALLER_ROLE to call escapeHatch()', async () => {
-    const { Staking_V1, owner, otherAccount } = await loadFixture(deployFixtures);
+    const { Staking_V1, otherAccount } = await loadFixture(deployFixtures);
 
     // call with owner account
-    await expect(Staking_V1.connect(owner).escapeHatch()).not.to.be.reverted;
+    await expect(Staking_V1.escapeHatch()).not.to.be.reverted;
 
     // call with another account not granted the role
     await expect(Staking_V1.connect(otherAccount).escapeHatch()).to.be.revertedWith(
       'Escapable: not permitted',
     );
+  });
+
+  describe('changeEscapeCaller()', () => {
+    it('must grant ESCAPE_CALLER_ROLE to the given account', async () => {
+      const { Staking_V1, otherAccount } = await loadFixture(deployFixtures);
+
+      expect(await Staking_V1.transferEscapeCallerRoleTo(otherAccount.address)).not.to.be
+        .reverted;
+
+      await expect(Staking_V1.hasRole(Roles.ESCAPE_CALLER_ROLE, otherAccount.address))
+        .eventually.to.be.true;
+    });
+
+    it("must revoke the caller's ESCAPE_CALLER_ROLE and ESCAPE_CALLER_ADMIN_ROLE", async () => {
+      const { Staking_V1, owner, otherAccount } = await loadFixture(deployFixtures);
+
+      await Staking_V1.transferEscapeCallerRoleTo(otherAccount.address);
+
+      await expect(Staking_V1.hasRole(Roles.ESCAPE_CALLER_ROLE, owner.address)).eventually
+        .to.be.false;
+
+      await expect(Staking_V1.hasRole(Roles.ESCAPE_CALLER_ADMIN_ROLE, owner.address))
+        .eventually.to.be.false;
+    });
+
+    it('must update the Escapable contract so only new user can call escapeHatch()', async () => {
+      const { Staking_V1, owner, otherAccount } = await loadFixture(deployFixtures);
+
+      await expect(Staking_V1.hasRole(Roles.ESCAPE_CALLER_ROLE, owner.address)).eventually
+        .to.be.true;
+
+      await Staking_V1.transferEscapeCallerRoleTo(otherAccount.address);
+
+      await expect(Staking_V1.escapeHatch()).to.be.revertedWith(
+        'Escapable: not permitted',
+      );
+
+      await expect(Staking_V1.connect(otherAccount).escapeHatch()).not.to.be.reverted;
+    });
   });
 
   /**
