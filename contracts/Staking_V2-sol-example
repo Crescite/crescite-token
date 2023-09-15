@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.17;
+
+import "./staking/StakingUpgradeable.sol";
+
+contract Staking_V2 is StakingUpgradeable {
+  // Must be called manually
+  // No need to call __Staking_init()__ this time as this was performed during deployment of V1
+  // Note - `reinitializer(2)` modifier, which sets the version number
+  function initializeV2(address tokenAddress, uint apr) reinitializer(2) public {
+    // Optionally update the token being staked
+    _setToken(tokenAddress);
+    _setAPR(apr);
+  }
+}

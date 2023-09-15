@@ -9,7 +9,7 @@ import {
   HARDHAT_NETWORK_URL,
   HARDHAT_PRIVATE_KEY,
   XINFIN_NETWORK_URL,
-  XINFIN_PRIVATE_KEY
+  XINFIN_PRIVATE_KEY,
 } from './env';
 
 export function getHardhatUserConfig(): HardhatUserConfig {
@@ -22,9 +22,9 @@ export function getHardhatUserConfig(): HardhatUserConfig {
       settings: {
         optimizer: {
           enabled: true,
-          runs: 200
+          runs: 200,
         },
-      }
+      },
     },
     // Use localhost for deploying contracts and running tasks
     defaultNetwork: 'localhost',
@@ -39,17 +39,17 @@ export function getHardhatUserConfig(): HardhatUserConfig {
         accounts: [
           {
             privateKey: HARDHAT_PRIVATE_KEY,
-            balance: '10000000000000000000'
+            balance: '10000000000000000000',
           },
           {
             privateKey: HARDHAT_ACCOUNT_2_PRIVATE_KEY,
-            balance: '5000000000000000000'
+            balance: '5000000000000000000',
           },
           {
             privateKey: DEV_ACCOUNT_1_PRIVATE_KEY,
-            balance: '1000000000000000000'
+            balance: '1000000000000000000',
           },
-        ]
+        ],
       },
       localhost: {
         url: HARDHAT_NETWORK_URL,
@@ -67,6 +67,6 @@ export function getHardhatUserConfig(): HardhatUserConfig {
     ethernal: {
       resetOnStart: ETHERNAL_WORKSPACE,
       disabled: process.env.NODE_ENV === 'test',
-    } as EthernalConfig
+    } as EthernalConfig,
   };
 }

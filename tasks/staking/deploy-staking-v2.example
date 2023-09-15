@@ -1,0 +1,55 @@
+import { getImplementationAddress } from '@openzeppelin/upgrades-core';
+import chalk from 'chalk';
+import { task } from 'hardhat/config';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { Staking_V2 } from '../../typechain-types';
+import { logSymbol } from '../../util';
+
+task('staking:deploy:v2', 'Upgrades Staking_V1 contract to Staking_V2')
+  .addParam('stakingV1Address', 'Address of Staking_V1 contract')
+  .addParam('tokenAddress', 'Address of the ERC20 token that will be staked')
+  .addParam('apr', 'Set the staking contract APR (e.g. 12)')
+  .setAction(
+    async ({ stakingV1Address, tokenAddress, apr }, hre: HardhatRuntimeEnvironment) => {
+      const contractName = 'Staking_V2';
+      const contractFactory = await hre.ethers.getContractFactory(contractName);
+
+      const result = await hre.upgrades.upgradeProxy(stakingV1Address, contractFactory);
+      const proxyContract = await result.deployed();
+
+      const StakingV2 = (await hre.ethers.getContractAt(
+        contractName,
+        proxyContract.address,
+      )) as Staking_V2;
+
+      // --------------------------------------------------------------
+      // This call is CRITICAL, contract must not be left uninitialized
+      // --------------------------------------------------------------
+      await StakingV2.initializeV2(tokenAddress, apr);
+
+      // Push the StakingV2 contract's ABI to ethernal, to the address of the now upgraded proxy contract
+      await hre.ethernal.push({
+        name: contractName,
+        address: proxyContract.address,
+      });
+
+      const implementationAddress = await getImplementationAddress(
+        hre.ethers.provider,
+        proxyContract.address,
+      );
+
+      console.log(
+        logSymbol.success,
+        chalk.green(
+          `${contractName} (proxy) ${proxyContract.address}`,
+        ),
+      );
+
+      console.log(
+        logSymbol.success,
+        chalk.green(`${contractName} (implementation - do not interact with this contract): ${implementationAddress}`),
+      );
+
+      return result.address;
+    },
+  );

@@ -11,14 +11,14 @@ Tracker: [xdcb5fa33923ec3ff7f4b9ab7b4c20b236d31243f77](https://explorer.xinfin.n
 The Crescite token uses industry standard, audited base contracts from [Open Zeppelin](https://www.openzeppelin.com/).
 The token contract supports the following set of base interfaces:
 
-* [Role-based](https://docs.openzeppelin.com/contracts/4.x/access-control#granting-and-revoking) [AccessControl](https://docs.openzeppelin.com/contracts/4.x/api/access)
-* [ERC20](https://docs.openzeppelin.com/contracts/4.x/erc20)
-* [Mintable](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20-_mint-address-uint256-)
-* [Burnable](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20-_burn-address-uint256-)
-* [Pausable](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20Pausable)
-* [Snapshot](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20Snapshot)
-* [Permit](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20Permit)
-* [Flash Minting](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20FlashMint)
+- [Role-based](https://docs.openzeppelin.com/contracts/4.x/access-control#granting-and-revoking) [AccessControl](https://docs.openzeppelin.com/contracts/4.x/api/access)
+- [ERC20](https://docs.openzeppelin.com/contracts/4.x/erc20)
+- [Mintable](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20-_mint-address-uint256-)
+- [Burnable](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20-_burn-address-uint256-)
+- [Pausable](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20Pausable)
+- [Snapshot](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20Snapshot)
+- [Permit](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20Permit)
+- [Flash Minting](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20FlashMint)
 
 ## Staking
 
@@ -26,19 +26,19 @@ The staking contract allows CRE holders to stake tokens and receieve rewards acc
 
 It uses the following math library for arithmetic operations:
 
-* [DSMath](https://github.com/dapphub/ds-math)
+- [DSMath](https://github.com/dapphub/ds-math)
 
 It also uses Open Zeppelin base contracts.
 
-* [Context](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/Context.sol)
-* [ReentrancyGuard](https://docs.openzeppelin.com/contracts/4.x/api/security#ReentrancyGuard)
-* [Ownable](https://docs.openzeppelin.com/contracts/4.x/api/access#Ownable)
-* [Pausable](https://docs.openzeppelin.com/contracts/4.x/api/security#Pausable)
+- [Context](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/Context.sol)
+- [ReentrancyGuard](https://docs.openzeppelin.com/contracts/4.x/api/security#ReentrancyGuard)
+- [Ownable](https://docs.openzeppelin.com/contracts/4.x/api/access#Ownable)
+- [Pausable](https://docs.openzeppelin.com/contracts/4.x/api/security#Pausable)
 
 ### Constructor parameters
 
-* CRE token address
-* APR (e.g. 12)
+- CRE token address
+- APR (e.g. 12)
 
 ## License
 
@@ -68,8 +68,8 @@ See `.env-example` for guidance on environment config vars.
 
 Local dev stack consists of:
 
-* Hardhat
-* Ethernal
+- Hardhat
+- Ethernal
 
 ## Accounts
 
@@ -77,9 +77,9 @@ Multiple accounts are configured locally to aid with simulating use of the staki
 
 ### Local accounts
 
-* Hardhat account 1 (corresponds to Hardhat's default address #1)
-* Hardhat account 2 (corresponds to Hardhat's default address #2)
-* Optional third account (arbitrary address)
+- Hardhat account 1 (corresponds to Hardhat's default address #1)
+- Hardhat account 2 (corresponds to Hardhat's default address #2)
+- Optional third account (arbitrary address)
 
 ### Apothem Network
 
@@ -115,6 +115,8 @@ XINFIN_STAKING_CONTRACT=[address of latest staking contract version]
 
 [Ethernal](https://app.tryethernal.com) is a block explorer that can sync with the Hardhat node.
 It runs remotely and syncs via the [`hardhat-ethernal`](https://github.com/tryethernal/hardhat-ethernal) plugin.
+
+Very useful for local development. You can list tokens, contracts, view transactions etc.
 
 ### Install
 
@@ -158,14 +160,46 @@ To change this edit the `ethernal` options slice of the Hardhat config located a
 
 ## Fixtures
 
+Deploy contracts and mint some tokens.
+
+### Auto
+
 This command performs the following:
 
-* Deploys both `Crescite` and `Staking` contracts to the Hardhat node
-* Mints CRE to local accounts as well as minting rewards tokens
-  to the staking contract address so it can supply rewards.
-* Sync contract artifacts to Ethernal for introspection
+1. Deploys both `Crescite` and `Staking` contracts to the Hardhat node
+2. Mints CRE to local accounts as well as minting rewards tokens to the staking contract address so it can supply rewards. 
+3. Sync contract artifacts to Ethernal for introspection
 
         hh dev:init
+
+### Manual
+
+After each command the deployed address will be output to `stdout` for copying.
+
+#### Step 1 - Deploy Crescite token contract
+
+    hh crescite:deploy
+
+#### Step 2 - Deploy Staking V1 contract
+
+Specify the token to stake (Crescite) and the staking APR (%):
+
+    // e.g. Crescite is deployed to 0x5FbDB2315678afecb367f032d93F642f64180aa3
+    hh staking:deploy:v1 --token-address 0x5FbDB2315678afecb367f032d93F642f64180aa3 --apr 12
+
+#### Step 3 - Mint token rewards to staking contract
+
+The staking rewards pool is 13.2 billion CRE tokens, so mint that quantity to be held
+in the staking contract:
+
+    // e.g. Staking contract deployed to 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+    hh mint --account 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 --amount 13200000000
+
+#### Step 4 - Mint some tokens to other EOA accounts
+
+For use in testing staking etc.
+
+    hh mint --account <HARDHAT_ACCOUNT_ADDRESS> --amount <QUANTITY>
 
 # Hardhat Tasks
 
@@ -216,7 +250,7 @@ Export ABI files from existing compilation artifacts.
 
 This task will withdraw all CRE from the staking contract to a specified address.
 
-    hh [GLOBAL OPTIONS] staking:emergency --network NETWORK 
+    hh [GLOBAL OPTIONS] staking:emergency --network NETWORK
 
 Follow the CLI prompts to specify the address.
 
@@ -268,7 +302,7 @@ Usage: hardhat [GLOBAL OPTIONS] balance --account <STRING>
 
 OPTIONS:
 
-  --account     the address of the account 
+  --account     the address of the account
 
 balance: Get balance of account
 ```
@@ -280,8 +314,8 @@ Usage: hh [GLOBAL OPTIONS] mint --account <STRING> --amount <STRING>
 
 OPTIONS:
 
-  --account     the address of the account 
-  --amount      the amount of tokens being minted to the address 
+  --account     the address of the account
+  --amount      the amount of tokens being minted to the address
 
 mint: Mint tokens
 ```
@@ -293,7 +327,7 @@ Usage: hardhat [GLOBAL OPTIONS] burn --amount <STRING>
 
 OPTIONS:
 
-  --amount      the amount of tokens in the issuing account that will be burnt 
+  --amount      the amount of tokens in the issuing account that will be burnt
 
 burn: Burn tokens in the issuing account
 ```
@@ -305,8 +339,8 @@ Usage: hh [GLOBAL OPTIONS] has-role --account <STRING> --role <STRING>
 
 OPTIONS:
 
-  --account     XDC account  
-  --role        one of the supported roles: DEFAULT_ADMIN_ROLE, SNAPSHOT_ROLE, PAUSER_ROLE, MINTER_ROLE 
+  --account     XDC account
+  --role        one of the supported roles: DEFAULT_ADMIN_ROLE, SNAPSHOT_ROLE, PAUSER_ROLE, MINTER_ROLE
 
 has-role: Determine if an acount has a role
 ```
@@ -318,8 +352,8 @@ Usage: hh [GLOBAL OPTIONS] grant-role --account <STRING> --role <STRING>
 
 OPTIONS:
 
-  --account     XDC account  
-  --role        one of the supported roles: DEFAULT_ADMIN_ROLE, SNAPSHOT_ROLE, PAUSER_ROLE, MINTER_ROLE 
+  --account     XDC account
+  --role        one of the supported roles: DEFAULT_ADMIN_ROLE, SNAPSHOT_ROLE, PAUSER_ROLE, MINTER_ROLE
 
 grant-role: Add an account to a role
 ```
@@ -331,10 +365,8 @@ Usage: hh [GLOBAL OPTIONS] revoke-role --account <STRING> --role <STRING>
 
 OPTIONS:
 
-  --account     XDC account 
-  --role        one of the supported roles: DEFAULT_ADMIN_ROLE, SNAPSHOT_ROLE, PAUSER_ROLE, MINTER_ROLE 
+  --account     XDC account
+  --role        one of the supported roles: DEFAULT_ADMIN_ROLE, SNAPSHOT_ROLE, PAUSER_ROLE, MINTER_ROLE
 
 revoke-role: Remove an account from a role
 ```
-
-

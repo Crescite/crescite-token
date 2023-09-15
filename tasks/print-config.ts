@@ -1,8 +1,6 @@
 import { task } from 'hardhat/config';
-import config from '../hardhat.config';
+import { getHardhatUserConfig } from '../util';
 
-task('print-config', 'Prints the config', async (taskArgs, hre) => {
-  console.log('config:')
-  console.log(JSON.stringify(config));
-  console.log();
+task('print-config', 'Prints the config', async () => {
+  console.log(JSON.stringify(getHardhatUserConfig()));
 });
