@@ -22,12 +22,16 @@ export const HARDHAT_ACCOUNT_2_PRIVATE_KEY = process.env
 export const APOTHEM_NETWORK_URL = process.env.APOTHEM_NETWORK_URL as string;
 export const APOTHEM_TOKEN_CONTRACT = process.env.APOTHEM_TOKEN_CONTRACT as string;
 export const APOTHEM_STAKING_CONTRACT = process.env.APOTHEM_STAKING_CONTRACT as string;
+
+export const APOTHEM_PUBLIC_KEY = process.env.APOTHEM_PUBLIC_KEY as string;
 export const APOTHEM_PRIVATE_KEY = process.env.APOTHEM_PRIVATE_KEY as string;
 
 export const XINFIN_NETWORK_URL = process.env.XINFIN_NETWORK_URL as string;
 export const XINFIN_TOKEN_CONTRACT = process.env.XINXIN_TOKEN_CONTRACT as string;
 export const XINFIN_STAKING_CONTRACT = process.env.XINFIN_STAKING_CONTRACT as string;
 export const XINFIN_PRIVATE_KEY = process.env.XINFIN_PRIVATE_KEY as string;
+
+export const TESTER_ACCOUNTS = (process.env.TESTER_ACCOUNTS as string).split(',');
 
 export const tokenAddresses: Record<string, string> = {
   localhost: HARDHAT_TOKEN_CONTRACT,
