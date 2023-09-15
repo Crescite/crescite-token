@@ -53,6 +53,8 @@ task(
       chalk.green(formatEther(await provider.getBalance(destinationAddress))),
     );
 
+    console.log('Withdraw destination:', chalk.red(destinationAddress));
+
     /**
      *
      */
