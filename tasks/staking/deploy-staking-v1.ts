@@ -20,7 +20,11 @@ task('staking:deploy:v1', 'Deploys the upgradeable Staking_V1 contract')
 
       const result = await hre.upgrades.deployProxy(
         contractFactory,
-        [xdcAddressToEth(tokenAddress), Number(apr), escapeHatchDestination],
+        [
+          xdcAddressToEth(tokenAddress),
+          Number(apr),
+          xdcAddressToEth(escapeHatchDestination),
+        ],
         { kind: 'uups' },
       );
 
