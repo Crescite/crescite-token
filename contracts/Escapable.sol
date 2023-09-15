@@ -5,13 +5,8 @@ import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /*
- * Adapted from https://github.com/Giveth/Donation-Doubler/blob/master/contracts/Escapable.sol
- *
- * @dev `Escapable` is a base level contract for and contract that wants to
- * add an escape hatch for a contract that holds ETH or ERC20 tokens. This
- * contract creates an `escapeHatch()` function to send its tokens to
- * `escapeHatchDestination` when called by the `escapeHatchCaller` in the case that
- * something unexpected happens
+ * @dev `Escapable` provides the ability to withdraw all funds from a contract
+ * escapeHatch() should be called used from a multisig wallet.
  */
 abstract contract Escapable is Initializable {
   address private _baseTokenAddress;
@@ -19,22 +14,16 @@ abstract contract Escapable is Initializable {
   address private _escapeHatchDestination;
 
   event EscapeHatchCalled(uint amount);
-  event EscapeHatchCallerChanged(address indexed newEscapeHatchCaller);
+  event EscapeHatchCallerChanged(address indexed newAddress);
   event EtherReceived(address indexed from, uint amount);
 
   /**
-   * @notice The initializer function assigns the `escapeHatchDestination`, the `escapeHatchCaller`, and the `baseToken`
-   *
-   * @param baseTokenAddress The address of the token that is used as a store value
-   * for this contract, 0x0 in case of ether. The token must implement IERC20 interface.
-   *
-   * @param escapeHatchDestination The address of a safe location (use a
-   * Multisig) to send the token defined by baseTokenAddress held in this contract
-   *
-   * @param escapeHatchCaller The address of a trusted account or contract to
-   * call `escapeHatch()` to send the `baseToken` in this contract to the
-   * `escapeHatchDestination` it would be ideal that `escapeHatchCaller`
-   * cannot move funds out of `escapeHatchDestination`
+   * @param baseTokenAddress address of the token used in parent contract, or 0x0 for ETH.
+   * Token must implement IERC20 interface.
+
+   * @param escapeHatchDestination Where to send funds
+
+   * @param escapeHatchCaller Address permitted to call escapeHatch()
    */
   function __Escapable_init(
     address baseTokenAddress,
@@ -47,8 +36,7 @@ abstract contract Escapable is Initializable {
   }
 
   /*
-   * @dev The addresses preassigned the `escapeHatchCaller` role
-   *  is the only addresses that can call a function with this modifier
+   * @notice Require call is made by escapeHatchCaller
    */
   modifier onlyEscapeHatchCaller() {
     require(msg.sender == _escapeHatchCaller, 'Escapable: not permitted');
@@ -56,14 +44,12 @@ abstract contract Escapable is Initializable {
   }
 
   /**
-   * @dev Hook called before executing the escapeHatch() function
-   *  can be used to apply access control from within the parent contract
+   * @dev Use the hook to apply access control from parent contract
    */
   function _beforeEscapeHatch(address caller) internal virtual {}
 
   /*
-   * @notice The `escapeHatch()` should only be called as a last resort if a
-   * security issue is uncovered or something unexpected happened
+   * @notice This should be called from a multisig wallet
    */
   function escapeHatch() public onlyEscapeHatchCaller {
     _beforeEscapeHatch(msg.sender);
@@ -77,15 +63,16 @@ abstract contract Escapable is Initializable {
   }
 
   /*
-   * @notice Changes the address assigned to call `escapeHatch()`
+   * @notice Changes the address permitted to call escapeHatch()
+
    * @param _newEscapeHatchCaller The address of a trusted account or contract to
    *  call `escapeHatch()` to send the ether in this contract to the
    *  `escapeHatchDestination` it would be ideal that `escapeHatchCaller` cannot
    *  move funds out of `escapeHatchDestination`
    */
-  function changeEscapeHatchCaller(address _newEscapeHatchCaller) public onlyEscapeHatchCaller {
-    _escapeHatchCaller = _newEscapeHatchCaller;
-    emit EscapeHatchCallerChanged(_escapeHatchCaller);
+  function changeEscapeHatchCaller(address newAddress) public onlyEscapeHatchCaller {
+    _escapeHatchCaller = newAddress;
+    emit EscapeHatchCallerChanged(newAddress);
   }
 
   /*
@@ -128,8 +115,7 @@ abstract contract Escapable is Initializable {
   /*
    * Receive Ether
    *
-   * @notice Called anytime ether is sent to the contract && creates an event
-   * to more easily track the incoming transactions
+   * @notice Called anytime ether is sent to the contract emit event to help trace
    */
   receive() external payable {
     // Do not accept ether if baseToken is not ETH
