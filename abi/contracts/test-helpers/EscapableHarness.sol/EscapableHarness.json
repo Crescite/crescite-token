@@ -18,7 +18,7 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "newEscapeHatchCaller",
+        "name": "newAddress",
         "type": "address"
       }
     ],
@@ -61,7 +61,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_newEscapeHatchCaller",
+        "name": "newAddress",
         "type": "address"
       }
     ],
