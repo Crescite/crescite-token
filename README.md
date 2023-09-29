@@ -2,9 +2,19 @@
 
 # Crescite smart contracts
 
-This is the repository for the [Crescite](https://crescite.org/) Token.
-Token
-Tracker: [xdcb5fa33923ec3ff7f4b9ab7b4c20b236d31243f77](https://explorer.xinfin.network/tokens/xdcb5fa33923ec3ff7f4b9ab7b4c20b236d31243f77)
+This is the repository for the [Crescite](https://crescite.org/) token and ecosystem.
+
+## Contract addresses
+
+| Contract   | Network | Address                                     |
+|------------|---------|---------------------------------------------|
+| Crescite   | apothem | xdcAb5A47dad25851921aFb56FDF9bfFA505385537F |
+| Crescite   | mainnet | xdcB5Fa33923EC3ff7F4B9AB7B4C20B236D31243F77 |
+| Staking_V1 | apothem | xdc81810CAA3Dd62A7328538cA9B4803c3115d703aA |
+| Staking_V1 | mainnet | Not deployed yet                            |
+
+
+CRE Token Tracker: [xdcb5fa33923ec3ff7f4b9ab7b4c20b236d31243f77](https://explorer.xinfin.network/tokens/xdcb5fa33923ec3ff7f4b9ab7b4c20b236d31243f77)
 
 ## Crescite
 
@@ -22,18 +32,27 @@ The token contract supports the following set of base interfaces:
 
 ## Staking
 
-The staking contract allows CRE holders to stake tokens and receieve rewards accrued per second at a fixed APR rate.
+The staking contract allows CRE holders to stake tokens and receive rewards accrued per second at a fixed APR rate.
+
+### Rewards schedule
+
+The staking contract has annual staking limits. It holds a balance of 13.2 billion CRE to be paid as staking rewards.
+
+| Year 1 | Staking allowance | Max rewards @ 12% |
+|--------|-------------------|-------------------|
+| 1      | 500,000,000       | 60,000,000        |
+| 2      | 1,500,000,000     | 180,000,000       |
+| 3      | 3,000,000,000     | 360,000,000       |
+| 4...38 | 3,000,000,000     | 360,000,000       |
+
+
+### Libraries
 
 It uses the following math library for arithmetic operations:
 
 - [DSMath](https://github.com/dapphub/ds-math)
 
-It also uses Open Zeppelin base contracts.
-
-- [Context](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/Context.sol)
-- [ReentrancyGuard](https://docs.openzeppelin.com/contracts/4.x/api/security#ReentrancyGuard)
-- [Ownable](https://docs.openzeppelin.com/contracts/4.x/api/access#Ownable)
-- [Pausable](https://docs.openzeppelin.com/contracts/4.x/api/security#Pausable)
+It also uses [Open Zeppelin](https://github.com/OpenZeppelin/openzeppelin-contracts) base contracts.
 
 ### Constructor parameters
 
@@ -85,7 +104,7 @@ Multiple accounts are configured locally to aid with simulating use of the staki
 
 ```
 APOTHEM_NETWORK_URL=https://erpc.apothem.network
-APOTHEM_PRIVATE_KEY=[the private ket for deploying to the Apothem network]
+APOTHEM_PRIVATE_KEY=[the private key for deploying to the Apothem network]
 APOTHEM_TOKEN_CONTRACT=[address of CRE token contract the staking contract should use]
 APOTHEM_STAKING_CONTRACT=[address of latest staking contract version]
 ```
@@ -166,7 +185,7 @@ Deploy contracts and mint some tokens.
 
 This command performs the following:
 
-1. Deploys both `Crescite` and `Staking` contracts to the Hardhat node
+1. Deploys both `Crescite` and `Staking_V1` contracts to the Hardhat node
 2. Mints CRE to local accounts as well as minting rewards tokens to the staking contract address so it can supply rewards. 
 3. Sync contract artifacts to Ethernal for introspection
 
@@ -200,6 +219,14 @@ in the staking contract:
 For use in testing staking etc.
 
     hh mint --account <HARDHAT_ACCOUNT_ADDRESS> --amount <QUANTITY>
+
+If you need to mint tokens to test user accounts on Apothem, use the `.env` variable `TESTER_ACCOUNTS`
+to specify a csv list of accounts to mint to. 
+
+Then mint to multiple accounts:
+
+      // will mint 1000 CRE to accounts specified in TEST_ACCOUNTS env variable
+      hh crescite:mint-to-test-accounts --network apothem
 
 # Hardhat Tasks
 
@@ -241,20 +268,19 @@ Export ABI files from existing compilation artifacts.
 
 ### Deploy
 
-    hh [GLOBAL OPTIONS] staking:deploy
+    hh [GLOBAL OPTIONS] staking:deploy:v1
+    
+Then using the deployed address:
 
-### Emergency
+      hh mint --account STAKING_ADDRESS --amount 13200000000 --network NETWORK
 
-> This command requires the staking contract to be paused:
-> `hh staking:pause`
+### Escape hatch
 
-This task will withdraw all CRE from the staking contract to a specified address.
+After a few safety prompts, this task will withdraw all CRE from the staking contract to a specified address.
 
-    hh [GLOBAL OPTIONS] staking:emergency --network NETWORK
+    hh [GLOBAL OPTIONS] staking:escape-hatch --network NETWORK
 
-Follow the CLI prompts to specify the address.
-
-> Note - This task will likely be deprecated in favour of a multisig approach
+Follow the CLI prompts to specify the address. This task is designed for debugging. In production a multisig wallet will be used to execute an escape hatch transaction.
 
 ### Pause
 

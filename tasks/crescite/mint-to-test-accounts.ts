@@ -8,7 +8,7 @@ import { logSymbol, TESTER_ACCOUNTS } from '../../util';
  *
  * TESTER_ACCOUNTS env var should contain csv of addresses
  */
-task('mint-to-test-accounts').setAction(
+task('crescite:mint-to-test-accounts').setAction(
   async (args: any, hre: HardhatRuntimeEnvironment) => {
     for (const address of TESTER_ACCOUNTS) {
       await hre.run('mint', {
