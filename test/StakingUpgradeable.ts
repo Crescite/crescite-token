@@ -66,10 +66,14 @@ async function mineBlockOneYearLaterMinusOneSecond() {
 
 // ------------------------------------------------------
 
+async function deployFixturesWithoutRewards() {
+  return deployFixtures(false);
+}
+
 /**
  * Deploy the Crescite and Staking contracts and mint some CRE tokens
  */
-async function deployFixtures() {
+async function deployFixtures(mintRewards = true) {
   const crescite = (await ethers.deployContract('Crescite')) as Crescite;
   const stakingContract = await ethers.getContractFactory('StakingTestHarness');
   const escapeHatchDestination = HARDHAT_ACCOUNT_1;
@@ -98,7 +102,10 @@ async function deployFixtures() {
   // * staking contract holds 13.2 billion CRE
   await crescite.mint(account1.address, big(NORMAL_ACCOUNT_STARTING_BALANCE));
   await crescite.mint(whaleAccount.address, big(WHALE_ACCOUNT_STARTING_BALANCE));
-  await crescite.mint(staking.address, big(STAKING_REWARDS_ALLOCATION));
+
+  if (mintRewards) {
+    await crescite.mint(staking.address, big(STAKING_REWARDS_ALLOCATION));
+  }
 
   return { crescite, staking, account1, whaleAccount, signers };
 }
@@ -143,6 +150,18 @@ describe('StakingUpgradeable', () => {
 
     expect(staking.userStakingTotals(account1.address)).eventually.to.equal(big(1000));
     expect(crescite.balanceOf(account1.address)).eventually.to.equal(big(1000));
+  });
+
+  it('must not stake if rewards pool is zero', async () => {
+    const { crescite, staking, account1 } = await loadFixture(
+      deployFixturesWithoutRewards,
+    );
+
+    await crescite.connect(account1).approve(staking.address, big(1000));
+
+    await expect(staking.connect(account1).stakeTokens(big(1000))).to.be.revertedWith(
+      'Rewards pool is empty',
+    );
   });
 
   it('must store multiple staking positions per user', async () => {
@@ -529,6 +548,27 @@ describe('StakingUpgradeable', () => {
         4_001_200_000,
       );
     });
+
+    it('should revert if insufficient rewards to unstake', async () => {
+      const { staking, account1, crescite } = await loadFixture(deployFixtures);
+
+      const Staking = staking.connect(account1);
+      await crescite.connect(account1).approve(staking.address, big(1000));
+
+      // add a staking position
+      await Staking.stakeTokens(big(1000));
+
+      // fast-forward five years
+      await time.increase(AVG_SECONDS_PER_YEAR * 5);
+
+      // drain the CRE from staking contract
+      // This will drain the user's stake and also the rewards
+      await Staking.escapeHatch();
+
+      await expect(Staking.unstakeTokens()).to.be.revertedWith(
+        'Insufficient balance to unstake and claim',
+      );
+    });
   });
 
   describe('claimRewards()', () => {
@@ -866,6 +906,36 @@ describe('StakingUpgradeable', () => {
           .sub(balance)
           .lte(acceptableDeviation),
       ).to.be.true;
+    });
+  });
+
+  describe('Receiving funds', () => {
+    it('staking contract must be able to receive funds after escape hatch called', async () => {
+      const { staking, account1, crescite } = await loadFixture(deployFixtures);
+
+      const Staking = staking.connect(account1);
+      await crescite.connect(account1).approve(staking.address, big(1000));
+
+      // add a staking position
+      await Staking.stakeTokens(big(1000));
+
+      // fast-forward five years
+      await time.increase(AVG_SECONDS_PER_YEAR * 5);
+
+      // drain the CRE from staking contract
+      // This will drain the user's stake and also the rewards
+      await Staking.escapeHatch();
+
+      await expect(Staking.unstakeTokens()).to.be.revertedWith(
+        'Insufficient balance to unstake and claim',
+      );
+
+      const account1Balance = await crescite.balanceOf(account1.address);
+
+      await crescite.connect(account1).approve(account1.address, account1Balance);
+      await crescite.transferFrom(account1.address, staking.address, account1Balance);
+
+      await expect(Staking.unstakeTokens()).not.to.reverted;
     });
   });
 });
