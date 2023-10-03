@@ -137,6 +137,12 @@ abstract contract StakingUpgradeable is
     _;
   }
 
+  modifier rewardsPoolNotEmpty() {
+    uint256 contractBalance = _token.balanceOf(address(this));
+    require(contractBalance > 0, "Rewards pool is empty");
+    _;
+  }
+
   /**
    * --------------------------------------------
    * Staking logic
@@ -159,6 +165,7 @@ abstract contract StakingUpgradeable is
     userBalanceGte(amount)
     limitNotReached(amount)
     onlyProxy
+    rewardsPoolNotEmpty
   {
     address user = _msgSender();
 
