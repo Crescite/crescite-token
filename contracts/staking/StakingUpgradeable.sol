@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
-import "@openzeppelin/contracts/interfaces/IERC20.sol";
+import "@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "../math/DSMath.sol";
 
@@ -29,6 +30,7 @@ abstract contract StakingUpgradeable is
   ReentrancyGuardUpgradeable,
   UUPSUpgradeable
 {
+  using SafeERC20Upgradeable for IERC20Upgradeable;
   using Counters for Counters.Counter;
 
   struct StakingPosition {
@@ -36,7 +38,7 @@ abstract contract StakingUpgradeable is
     uint256 timestamp;
   }
 
-  address private _tokenAddress;
+  IERC20Upgradeable private _token;
   uint256 private APR;
 
   uint256 private PRECISION;
@@ -103,8 +105,7 @@ abstract contract StakingUpgradeable is
    * --------------------------------------------
    */
   function _setToken(address tokenAddress) internal onlyOwner {
-    _tokenAddress = tokenAddress;
-
+    _token = IERC20Upgradeable(tokenAddress);
   }
 
   function _setAPR(uint apr) internal onlyOwner {
@@ -122,7 +123,7 @@ abstract contract StakingUpgradeable is
   }
 
   modifier userBalanceGte(uint256 amount) {
-    require(IERC20(_tokenAddress).balanceOf(_msgSender()) >= amount, "Insufficient token balance");
+    require(_token.balanceOf(_msgSender()) >= amount, "Insufficient token balance");
     _;
   }
 
@@ -170,7 +171,7 @@ abstract contract StakingUpgradeable is
     address user = _msgSender();
 
     // Transfer tokens from user to staking contract
-    IERC20(_tokenAddress).transferFrom(user, address(this), amount);
+    _token.safeTransferFrom(user, address(this), amount);
 
     // Create a new staking position for the amount and block timestamp
     stakingPositions[user].push(StakingPosition(amount, block.timestamp));
@@ -210,7 +211,7 @@ abstract contract StakingUpgradeable is
     uint256 rewards = calculatePositionRewards(position.amount, position.timestamp);
 
     // Ensure the contract has a sufficient balance to pay rewards
-    require(IERC20(_tokenAddress).balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
+    require(_token.balanceOf(address(this)) >= rewards, "Insufficient balance to close position");
 
     // delete the position
     stakingPositions[user] = removeStakingPosition(index, stakingPositions[user]);
@@ -230,7 +231,7 @@ abstract contract StakingUpgradeable is
     totalStaked = sub(totalStaked, position.amount);
 
     // transfer the original stake plus rewards to the user
-    IERC20(_tokenAddress).transfer(user, add(position.amount, rewards));
+    _token.safeTransfer(user, add(position.amount, rewards));
 
     emit Unstaked(user, position.amount, rewards);
   }
@@ -263,7 +264,7 @@ abstract contract StakingUpgradeable is
     uint256 rewards = calculatePositionRewards(amountToUnstake, position.timestamp);
 
     // Ensure the contract has a sufficient balance to pay rewards
-    require(IERC20(_tokenAddress).balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
+    require(_token.balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
 
     // replace the position with new position for the remaining amount with the original timestamp
     stakingPositions[user][index] = StakingPosition(remainingAmount, position.timestamp);
@@ -275,7 +276,7 @@ abstract contract StakingUpgradeable is
     totalStaked = sub(totalStaked, amountToUnstake);
 
     // transfer the original stake plus rewards to the user
-    IERC20(_tokenAddress).transfer(user, add(amountToUnstake, rewards));
+    _token.safeTransfer(user, add(amountToUnstake, rewards));
 
     emit Unstaked(user, amountToUnstake, rewards);
   }
@@ -296,7 +297,7 @@ abstract contract StakingUpgradeable is
 
     // Ensure the contract has a sufficient balance to pay
     require(
-      IERC20(_tokenAddress).balanceOf(address(this)) >= amountToTransfer,
+      _token.balanceOf(address(this)) >= amountToTransfer,
       "Insufficient balance to unstake and claim"
     );
 
@@ -318,7 +319,7 @@ abstract contract StakingUpgradeable is
     // Transfer staked tokens from staking contract back to user
     // only *after* zeroing their staked balance to help minimise attack vector
     // @see https://consensys.io/diligence/blog/2019/09/stop-using-soliditys-transfer-now/
-    IERC20(_tokenAddress).transfer(user, amountToTransfer);
+    _token.safeTransfer(user, amountToTransfer);
 
     emit Unstaked(user, amountStaked, rewards);
   }
@@ -336,14 +337,14 @@ abstract contract StakingUpgradeable is
     uint256 rewards = getUserRewards(user);
 
     // Ensure the contract has a sufficient balance to pay rewards
-    require(IERC20(_tokenAddress).balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
+    require(_token.balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
 
     // set positions to current timestamp so they begin calculating
     // rewards from this point in time
     resetUserPositionTimestamps(user);
 
     // transfer the rewards to the user
-    IERC20(_tokenAddress).transfer(user, rewards);
+    _token.safeTransfer(user, rewards);
 
     emit ClaimRewards(user, rewards);
   }
