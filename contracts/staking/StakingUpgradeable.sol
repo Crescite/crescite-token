@@ -463,20 +463,18 @@ abstract contract StakingUpgradeable is
     uint256 positionAmount,
     uint256 positionTimestamp
   ) internal view returns (uint256) {
-    // calculate the rewards for a year from the position amount
-    uint256 rewardsPerYear = wmul(positionAmount, wdiv(wmul(APR, PRECISION), wmul(100, PRECISION)));
-
-    // then calculate the rewards per second for this position
-    uint256 rewardsPerSecond = wdiv(rewardsPerYear, wmul(SECONDS_IN_YEAR, PRECISION));
-
     // Calculate the time elapsed since the position was opened
     uint256 elapsedSeconds = sub(getCurrentOrEndTime(), positionTimestamp);
 
-    // Calculate the rewards based on the elapsed time and rewards per second
-    uint256 reward = wmul(rewardsPerSecond, wmul(elapsedSeconds, PRECISION));
+    uint256 numerator = positionAmount * APR * elapsedSeconds;
+    uint256 divisor = 100 * SECONDS_IN_YEAR * PRECISION;
+
+    require(divisor > 0, "Cannot divide by zero");
+
+    uint256 rewards = wdiv(numerator, divisor);
 
     // Return the calculated rewards
-    return reward;
+    return rewards;
   }
 
   /**
