@@ -434,20 +434,21 @@ abstract contract StakingUpgradeable is
    */
 
   /**
-   * Calculate the users rewards.
-   * - Calculate from all staking positions
-   * - Subtract amount of rewards already claimed
+   * Calculate the users rewards from all staking positions
    */
   function getUserRewards(address user) internal view returns (uint256) {
-    uint256 rewards = 0;
+    uint256 rewards;
+    uint256 length = stakingPositions[user].length;
 
-    // Calculate the total rewards from the user's staking staking positions
-    // Calculate total staked amount and rewards
-    for (uint256 i = 0; i < stakingPositions[user].length; i++) {
-      uint256 amount = stakingPositions[user][i].amount;
-      uint256 timestamp = stakingPositions[user][i].timestamp;
+    unchecked {
+      // Calculate the total rewards from the user's staking staking positions
+      // Calculate total staked amount and rewards
+      for (uint256 i; i < length; ++i) {
+        uint256 amount = stakingPositions[user][i].amount;
+        uint256 timestamp = stakingPositions[user][i].timestamp;
 
-      rewards = add(rewards, calculatePositionRewards(amount, timestamp));
+        rewards = add(rewards, calculatePositionRewards(amount, timestamp));
+      }
     }
 
     return rewards;
