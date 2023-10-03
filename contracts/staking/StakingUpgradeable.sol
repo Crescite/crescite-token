@@ -63,7 +63,6 @@ abstract contract StakingUpgradeable is
   event Staked(address indexed user, uint256 amount);
   event Unstaked(address indexed user, uint256 amount, uint256 rewards);
   event ClaimRewards(address indexed user, uint256 rewards);
-  event WithdrawFunds(address indexed user, uint256 amount);
 
   function __Staking_init() internal onlyInitializing {
     __Staking_init_unchained();
@@ -356,17 +355,6 @@ abstract contract StakingUpgradeable is
     for (uint256 i = 0; i < stakingPositions[user].length; i++) {
       stakingPositions[user][i].timestamp = block.timestamp;
     }
-  }
-
-  /**
-   * In an emergency this allows the contract owner to
-   * withdraw all CRE funds held in the contract.
-   */
-  function withdrawFunds() external nonReentrant onlyOwner whenPaused {
-    uint256 amount = IERC20(_tokenAddress).balanceOf(address(this));
-
-    IERC20(_tokenAddress).transfer(owner(), amount);
-    emit WithdrawFunds(owner(), amount);
   }
 
   /**
