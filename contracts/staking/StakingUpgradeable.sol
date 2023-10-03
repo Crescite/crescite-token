@@ -525,12 +525,10 @@ abstract contract StakingUpgradeable is
   ) private returns (StakingPosition[] storage) {
     require(index < positions.length, "Index out of bounds");
 
-    // shift elements to the left (this will delete the item at index)
-    for (uint i = index; i < positions.length - 1; i++) {
-      positions[i] = positions[i + 1];
-    }
+    // Swap the element to be removed with the last element
+    positions[index] = positions[positions.length - 1];
 
-    // then remove the last entry
+    // Remove the last element
     positions.pop();
 
     return positions;
