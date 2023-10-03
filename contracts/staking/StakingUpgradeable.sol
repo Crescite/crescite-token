@@ -104,10 +104,18 @@ abstract contract StakingUpgradeable is
    * --------------------------------------------
    */
   function _setToken(address tokenAddress) internal onlyOwner {
+    require(tokenAddress != address(0x0), "Token address cannot be the zero address");
+
     _token = IERC20Upgradeable(tokenAddress);
   }
 
   function _setAPR(uint apr) internal onlyOwner {
+    // Check if there are any staking positions
+    require(_numberOfStakers.current() == 0, "Cannot change APR when staking positions exist");
+
+    require(apr > 0, 'APR cannot be zero');
+    require(apr <= 500, 'APR too high');
+
     APR = apr;
   }
 
