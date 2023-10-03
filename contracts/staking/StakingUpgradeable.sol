@@ -218,6 +218,11 @@ abstract contract StakingUpgradeable is
     // decrement the number of positions held by user
     userPositionCount[user] = sub(userPositionCount[user], 1);
 
+    // if user now has zero positions, decrement the count of staking users
+    if (userPositionCount[user] == 0) {
+      _numberOfStakers.decrement();
+    }
+
     // update user staked total
     userStakingTotals[user] = sub(userStakingTotals[user], position.amount);
 
