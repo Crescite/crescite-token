@@ -56,6 +56,8 @@ abstract contract StakingUpgradeable is
   mapping(address => uint256) public userStakingTotals;
   mapping(address => uint256) public userPositionCount;
 
+  uint256[50] private __gap;
+
   event Staked(address indexed user, uint256 amount);
   event Unstaked(address indexed user, uint256 amount, uint256 rewards);
   event ClaimRewards(address indexed user, uint256 rewards);
