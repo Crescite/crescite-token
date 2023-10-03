@@ -86,8 +86,6 @@ abstract contract StakingUpgradeable is
     YEAR_1_LIMIT = 500_000_000 * PRECISION;
     YEAR_2_LIMIT = 1_500_000_000 * PRECISION;
     YEARLY_LIMIT = 3_000_000_000 * PRECISION;
-
-    totalStaked = 0;
   }
 
   /**
@@ -360,7 +358,7 @@ abstract contract StakingUpgradeable is
    *
    */
   function resetUserPositionTimestamps(address user) internal {
-    for (uint256 i = 0; i < stakingPositions[user].length; i++) {
+    for (uint256 i; i < stakingPositions[user].length; i++) {
       stakingPositions[user][i].timestamp = block.timestamp;
     }
   }
