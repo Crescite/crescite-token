@@ -39,7 +39,7 @@ abstract contract Escapable is Initializable {
    * @notice Require call is made by escapeHatchCaller
    */
   modifier onlyEscapeHatchCaller() {
-    require(msg.sender == _escapeHatchCaller, 'Escapable: not permitted');
+    require(msg.sender == _escapeHatchCaller, "Escapable: not permitted");
     _;
   }
 
@@ -98,12 +98,14 @@ abstract contract Escapable is Initializable {
     // Send ERC20 token
     if (_baseTokenAddress != address(0x0)) {
       if (!IERC20(_baseTokenAddress).transfer(payable(to), amount)) {
-        revert('Escapable: Transfer failed');
+        revert("Escapable: Transfer failed");
       }
     } else {
       // send ETH
-      if (!payable(to).send(amount)) {
-        revert('Escapable: Send failed');
+      (bool success, ) = payable(to).call{value: amount}("");
+
+      if (!success) {
+        revert("Escapable: Send failed");
       }
     }
   }
