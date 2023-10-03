@@ -105,7 +105,7 @@ XINFIN_STAKING_CONTRACT=[address of latest staking contract version]
 
 ## Run unit tests
 
-    hh test
+    npm run test
 
 ## Running Hardhat node
 
