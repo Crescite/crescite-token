@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
-import "@openzeppelin/contracts/interfaces/IERC20.sol";
+import "@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "../math/DSMath.sol";
 
@@ -29,6 +30,7 @@ abstract contract StakingUpgradeable is
   ReentrancyGuardUpgradeable,
   UUPSUpgradeable
 {
+  using SafeERC20Upgradeable for IERC20Upgradeable;
   using Counters for Counters.Counter;
 
   struct StakingPosition {
@@ -36,7 +38,7 @@ abstract contract StakingUpgradeable is
     uint256 timestamp;
   }
 
-  address private _tokenAddress;
+  IERC20Upgradeable private _token;
   uint256 private APR;
 
   uint256 private PRECISION;
@@ -56,10 +58,11 @@ abstract contract StakingUpgradeable is
   mapping(address => uint256) public userStakingTotals;
   mapping(address => uint256) public userPositionCount;
 
+  uint256[50] private __gap;
+
   event Staked(address indexed user, uint256 amount);
   event Unstaked(address indexed user, uint256 amount, uint256 rewards);
   event ClaimRewards(address indexed user, uint256 rewards);
-  event WithdrawFunds(address indexed user, uint256 amount);
 
   function __Staking_init() internal onlyInitializing {
     __Staking_init_unchained();
@@ -83,8 +86,6 @@ abstract contract StakingUpgradeable is
     YEAR_1_LIMIT = 500_000_000 * PRECISION;
     YEAR_2_LIMIT = 1_500_000_000 * PRECISION;
     YEARLY_LIMIT = 3_000_000_000 * PRECISION;
-
-    totalStaked = 0;
   }
 
   /**
@@ -101,11 +102,18 @@ abstract contract StakingUpgradeable is
    * --------------------------------------------
    */
   function _setToken(address tokenAddress) internal onlyOwner {
-    _tokenAddress = tokenAddress;
+    require(tokenAddress != address(0x0), "Token address cannot be the zero address");
 
+    _token = IERC20Upgradeable(tokenAddress);
   }
 
   function _setAPR(uint apr) internal onlyOwner {
+    // Check if there are any staking positions
+    require(_numberOfStakers.current() == 0, "Cannot change APR when staking positions exist");
+
+    require(apr > 0, 'APR cannot be zero');
+    require(apr <= 500, 'APR too high');
+
     APR = apr;
   }
 
@@ -120,7 +128,7 @@ abstract contract StakingUpgradeable is
   }
 
   modifier userBalanceGte(uint256 amount) {
-    require(IERC20(_tokenAddress).balanceOf(_msgSender()) >= amount, "Insufficient token balance");
+    require(_token.balanceOf(_msgSender()) >= amount, "Insufficient token balance");
     _;
   }
 
@@ -132,6 +140,12 @@ abstract contract StakingUpgradeable is
   modifier hasPosition(uint index) {
     require(stakingPositions[_msgSender()].length > 0, "Unstake: No staking positions");
     require(index < stakingPositions[_msgSender()].length, "closePosition: Index out of range");
+    _;
+  }
+
+  modifier rewardsPoolNotEmpty() {
+    uint256 contractBalance = _token.balanceOf(address(this));
+    require(contractBalance > 0, "Rewards pool is empty");
     _;
   }
 
@@ -157,11 +171,12 @@ abstract contract StakingUpgradeable is
     userBalanceGte(amount)
     limitNotReached(amount)
     onlyProxy
+    rewardsPoolNotEmpty
   {
     address user = _msgSender();
 
     // Transfer tokens from user to staking contract
-    IERC20(_tokenAddress).transferFrom(user, address(this), amount);
+    _token.safeTransferFrom(user, address(this), amount);
 
     // Create a new staking position for the amount and block timestamp
     stakingPositions[user].push(StakingPosition(amount, block.timestamp));
@@ -201,13 +216,18 @@ abstract contract StakingUpgradeable is
     uint256 rewards = calculatePositionRewards(position.amount, position.timestamp);
 
     // Ensure the contract has a sufficient balance to pay rewards
-    require(IERC20(_tokenAddress).balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
+    require(_token.balanceOf(address(this)) >= rewards, "Insufficient balance to close position");
 
     // delete the position
     stakingPositions[user] = removeStakingPosition(index, stakingPositions[user]);
 
     // decrement the number of positions held by user
     userPositionCount[user] = sub(userPositionCount[user], 1);
+
+    // if user now has zero positions, decrement the count of staking users
+    if (userPositionCount[user] == 0) {
+      _numberOfStakers.decrement();
+    }
 
     // update user staked total
     userStakingTotals[user] = sub(userStakingTotals[user], position.amount);
@@ -216,7 +236,7 @@ abstract contract StakingUpgradeable is
     totalStaked = sub(totalStaked, position.amount);
 
     // transfer the original stake plus rewards to the user
-    IERC20(_tokenAddress).transfer(user, add(position.amount, rewards));
+    _token.safeTransfer(user, add(position.amount, rewards));
 
     emit Unstaked(user, position.amount, rewards);
   }
@@ -249,7 +269,7 @@ abstract contract StakingUpgradeable is
     uint256 rewards = calculatePositionRewards(amountToUnstake, position.timestamp);
 
     // Ensure the contract has a sufficient balance to pay rewards
-    require(IERC20(_tokenAddress).balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
+    require(_token.balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
 
     // replace the position with new position for the remaining amount with the original timestamp
     stakingPositions[user][index] = StakingPosition(remainingAmount, position.timestamp);
@@ -261,7 +281,7 @@ abstract contract StakingUpgradeable is
     totalStaked = sub(totalStaked, amountToUnstake);
 
     // transfer the original stake plus rewards to the user
-    IERC20(_tokenAddress).transfer(user, add(amountToUnstake, rewards));
+    _token.safeTransfer(user, add(amountToUnstake, rewards));
 
     emit Unstaked(user, amountToUnstake, rewards);
   }
@@ -282,7 +302,7 @@ abstract contract StakingUpgradeable is
 
     // Ensure the contract has a sufficient balance to pay
     require(
-      IERC20(_tokenAddress).balanceOf(address(this)) >= amountToTransfer,
+      _token.balanceOf(address(this)) >= amountToTransfer,
       "Insufficient balance to unstake and claim"
     );
 
@@ -304,7 +324,7 @@ abstract contract StakingUpgradeable is
     // Transfer staked tokens from staking contract back to user
     // only *after* zeroing their staked balance to help minimise attack vector
     // @see https://consensys.io/diligence/blog/2019/09/stop-using-soliditys-transfer-now/
-    IERC20(_tokenAddress).transfer(user, amountToTransfer);
+    _token.safeTransfer(user, amountToTransfer);
 
     emit Unstaked(user, amountStaked, rewards);
   }
@@ -322,14 +342,14 @@ abstract contract StakingUpgradeable is
     uint256 rewards = getUserRewards(user);
 
     // Ensure the contract has a sufficient balance to pay rewards
-    require(IERC20(_tokenAddress).balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
+    require(_token.balanceOf(address(this)) >= rewards, "Insufficient balance to pay rewards");
 
     // set positions to current timestamp so they begin calculating
     // rewards from this point in time
     resetUserPositionTimestamps(user);
 
     // transfer the rewards to the user
-    IERC20(_tokenAddress).transfer(user, rewards);
+    _token.safeTransfer(user, rewards);
 
     emit ClaimRewards(user, rewards);
   }
@@ -338,20 +358,9 @@ abstract contract StakingUpgradeable is
    *
    */
   function resetUserPositionTimestamps(address user) internal {
-    for (uint256 i = 0; i < stakingPositions[user].length; i++) {
+    for (uint256 i; i < stakingPositions[user].length; i++) {
       stakingPositions[user][i].timestamp = block.timestamp;
     }
-  }
-
-  /**
-   * In an emergency this allows the contract owner to
-   * withdraw all CRE funds held in the contract.
-   */
-  function withdrawFunds() external nonReentrant onlyOwner whenPaused {
-    uint256 amount = IERC20(_tokenAddress).balanceOf(address(this));
-
-    IERC20(_tokenAddress).transfer(owner(), amount);
-    emit WithdrawFunds(owner(), amount);
   }
 
   /**
@@ -425,20 +434,21 @@ abstract contract StakingUpgradeable is
    */
 
   /**
-   * Calculate the users rewards.
-   * - Calculate from all staking positions
-   * - Subtract amount of rewards already claimed
+   * Calculate the users rewards from all staking positions
    */
   function getUserRewards(address user) internal view returns (uint256) {
-    uint256 rewards = 0;
+    uint256 rewards;
+    uint256 length = stakingPositions[user].length;
 
-    // Calculate the total rewards from the user's staking staking positions
-    // Calculate total staked amount and rewards
-    for (uint256 i = 0; i < stakingPositions[user].length; i++) {
-      uint256 amount = stakingPositions[user][i].amount;
-      uint256 timestamp = stakingPositions[user][i].timestamp;
+    unchecked {
+      // Calculate the total rewards from the user's staking staking positions
+      // Calculate total staked amount and rewards
+      for (uint256 i; i < length; ++i) {
+        uint256 amount = stakingPositions[user][i].amount;
+        uint256 timestamp = stakingPositions[user][i].timestamp;
 
-      rewards = add(rewards, calculatePositionRewards(amount, timestamp));
+        rewards = add(rewards, calculatePositionRewards(amount, timestamp));
+      }
     }
 
     return rewards;
@@ -454,20 +464,18 @@ abstract contract StakingUpgradeable is
     uint256 positionAmount,
     uint256 positionTimestamp
   ) internal view returns (uint256) {
-    // calculate the rewards for a year from the position amount
-    uint256 rewardsPerYear = wmul(positionAmount, wdiv(wmul(APR, PRECISION), wmul(100, PRECISION)));
-
-    // then calculate the rewards per second for this position
-    uint256 rewardsPerSecond = wdiv(rewardsPerYear, wmul(SECONDS_IN_YEAR, PRECISION));
-
     // Calculate the time elapsed since the position was opened
     uint256 elapsedSeconds = sub(getCurrentOrEndTime(), positionTimestamp);
 
-    // Calculate the rewards based on the elapsed time and rewards per second
-    uint256 reward = wmul(rewardsPerSecond, wmul(elapsedSeconds, PRECISION));
+    uint256 numerator = positionAmount * APR * elapsedSeconds;
+    uint256 divisor = 100 * SECONDS_IN_YEAR * PRECISION;
+
+    require(divisor > 0, "Cannot divide by zero");
+
+    uint256 rewards = wdiv(numerator, divisor);
 
     // Return the calculated rewards
-    return reward;
+    return rewards;
   }
 
   /**
@@ -518,12 +526,10 @@ abstract contract StakingUpgradeable is
   ) private returns (StakingPosition[] storage) {
     require(index < positions.length, "Index out of bounds");
 
-    // shift elements to the left (this will delete the item at index)
-    for (uint i = index; i < positions.length - 1; i++) {
-      positions[i] = positions[i + 1];
-    }
+    // Swap the element to be removed with the last element
+    positions[index] = positions[positions.length - 1];
 
-    // then remove the last entry
+    // Remove the last element
     positions.pop();
 
     return positions;
