@@ -148,6 +148,7 @@ To create an account go to https://app.tryethernal.com.
 Once your account is created you must also create a workspace. Then add the workpace name to your `.env` file:
 
     ETHERNAL_WORKSPACE=[NAME]
+    ETHERNAL_API_TOKEN=
 
 The workspace syncs with the local Hardhat node via the `hardhat-ethernal` plugin.
 

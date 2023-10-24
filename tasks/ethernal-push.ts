@@ -20,4 +20,8 @@ task('ethernal-push').setAction(async (args: any, hre: any) => {
     name: 'Staking_V1',
     address: xdcAddressToEth(HARDHAT_STAKING_CONTRACT),
   });
+  await hre.ethernal.push({
+    name: 'GoldToken',
+    address: xdcAddressToEth('0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9'),
+  });
 });
