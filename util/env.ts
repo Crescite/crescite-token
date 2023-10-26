@@ -16,6 +16,7 @@ export const DEV_ACCOUNT_2_PRIVATE_KEY =
 
 export const HARDHAT_TOKEN_CONTRACT = process.env.HARDHAT_TOKEN_CONTRACT as string;
 export const HARDHAT_STAKING_CONTRACT = process.env.HARDHAT_STAKING_CONTRACT as string;
+export const HARDHAT_GOLDTOKEN_CONTRACT = process.env.HARDHAT_GOLDTOKEN_CONTRACT as string;
 export const HARDHAT_NETWORK_URL = process.env.HARDHAT_NETWORK_URL as string;
 
 // needs to be renamed HARDHAT_ACCOUNT_1_PRIVATE_KEY:
@@ -50,4 +51,11 @@ export const stakingAddresses: Record<string, string> = {
   hardhat: HARDHAT_STAKING_CONTRACT,
   apothem: APOTHEM_STAKING_CONTRACT,
   xinfin: XINFIN_STAKING_CONTRACT,
+};
+
+export const goldTokenAddresses: Record<string, string> = {
+  localhost: HARDHAT_GOLDTOKEN_CONTRACT,
+  hardhat: HARDHAT_GOLDTOKEN_CONTRACT,
+  // apothem: APOTHEM_GOLDTOKEN_CONTRACT,
+  // xinfin: XINFIN_GOLDTOKEN_CONTRACT,
 };

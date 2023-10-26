@@ -2,6 +2,7 @@ import { task } from 'hardhat/config';
 import {
   HARDHAT_STAKING_CONTRACT,
   HARDHAT_TOKEN_CONTRACT,
+  HARDHAT_GOLDTOKEN_CONTRACT,
   xdcAddressToEth,
 } from '../util';
 
@@ -22,6 +23,6 @@ task('ethernal-push').setAction(async (args: any, hre: any) => {
   });
   await hre.ethernal.push({
     name: 'GoldToken',
-    address: xdcAddressToEth('0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9'),
+    address: xdcAddressToEth(HARDHAT_GOLDTOKEN_CONTRACT),
   });
 });

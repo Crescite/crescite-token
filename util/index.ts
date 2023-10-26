@@ -1,5 +1,6 @@
 export * from './bind-to-crescite';
 export * from './bind-to-staking';
+export * from './bind-to-goldtoken';
 export * from './cli-format-info';
 export * from './cli-format-success';
 export * from './env';
