@@ -1,11 +1,11 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { Crescite } from '../typechain-types';
 import { formatEther } from './format-ether';
+import { IERC20 } from '../typechain-types';
 
 export async function getTotalSupply(
-  crescite: Crescite,
+  erc20Token: IERC20,
   hre: HardhatRuntimeEnvironment,
 ): Promise<string> {
-  const totalSupply = await crescite.totalSupply();
+  const totalSupply = await erc20Token.totalSupply();
   return formatEther(totalSupply, hre);
 }

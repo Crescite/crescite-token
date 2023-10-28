@@ -28,22 +28,28 @@ task('dev:init', 'Deploy contracts to local network, mint tokens').setAction(
       }),
     );
     console.log('-----------------------------------');
-    await hre.run(
-      'mint',
-      applyNetwork({ account: HARDHAT_ACCOUNT_1, amount: '100000000' }),
-    );
+    await hre.run('goldtoken:deploy', applyNetwork());
+
     console.log('-----------------------------------');
-    await hre.run(
-      'mint',
-      applyNetwork({ account: HARDHAT_ACCOUNT_2, amount: '550000000' }),
-    );
-    console.log('-----------------------------------');
+    // await hre.run(
+    //   'mint',
+    //   applyNetwork({ account: HARDHAT_ACCOUNT_1, amount: '100000000' }),
+    // );
+    // console.log('-----------------------------------');
+    // await hre.run(
+    //   'mint',
+    //   applyNetwork({ account: HARDHAT_ACCOUNT_2, amount: '550000000' }),
+    // );
+    // console.log('-----------------------------------');
     await hre.run('mint', applyNetwork({ account: DEV_ACCOUNT_1, amount: '25000' }));
+    // console.log('-----------------------------------');
+    // await hre.run(
+    //   'mint',
+    //   applyNetwork({ account: HARDHAT_STAKING_CONTRACT, amount: '13200000000' }),
+    // );
     console.log('-----------------------------------');
-    await hre.run(
-      'mint',
-      applyNetwork({ account: HARDHAT_STAKING_CONTRACT, amount: '13200000000' }),
-    );
+    await hre.run('goldtoken:mint', applyNetwork({account: HARDHAT_ACCOUNT_1, toaccount: DEV_ACCOUNT_1, amount: '1200' }));
     console.log('\n\n');
+
   },
 );

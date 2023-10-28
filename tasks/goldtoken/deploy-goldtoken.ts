@@ -11,7 +11,7 @@ task(
 
     try {
       const GoldToken = await hre.ethers.getContractFactory('GoldToken');
-      const goldtoken = await GoldToken.deploy('100000000000000000000');
+      const goldtoken = await GoldToken.deploy();
       await goldtoken.deployed();
 
       console.log(

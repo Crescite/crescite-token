@@ -18,7 +18,7 @@ task('mint', 'Mint tokens')
     const amountWei = hre.ethers.utils.parseEther(amount);
 
     console.log(
-      chalk.bold(`Minting ${formatNumberString(amount)} tokens to account ${account}`),
+      chalk.bold(`Minting ${formatNumberString(amount)} Crescite tokens to account ${account}`),
     );
     console.log(
       '- total supply before minting: ',
