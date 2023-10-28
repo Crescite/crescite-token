@@ -48,7 +48,7 @@ task('dev:init', 'Deploy contracts to local network, mint tokens').setAction(
     //   applyNetwork({ account: HARDHAT_STAKING_CONTRACT, amount: '13200000000' }),
     // );
     console.log('-----------------------------------');
-    await hre.run('goldtoken:mint', applyNetwork({account: HARDHAT_ACCOUNT_1, toaccount: DEV_ACCOUNT_1, amount: '1200' }));
+    await hre.run('goldtoken:mint', applyNetwork({account: DEV_ACCOUNT_1, amount: '1200' }));
     console.log('\n\n');
 
   },
