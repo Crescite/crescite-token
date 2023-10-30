@@ -4,6 +4,7 @@ import {
   APOTHEM_NETWORK_URL,
   APOTHEM_PRIVATE_KEY,
   DEV_ACCOUNT_1_PRIVATE_KEY,
+  DEV_ACCOUNT_2_PRIVATE_KEY,
   ETHERNAL_WORKSPACE,
   HARDHAT_ACCOUNT_2_PRIVATE_KEY,
   HARDHAT_NETWORK_URL,
@@ -15,7 +16,7 @@ import {
 export function getHardhatUserConfig(): HardhatUserConfig {
   return {
     abiExporter: {
-      runOnCompile: true
+      runOnCompile: true,
     },
     solidity: {
       version: '0.8.17',
@@ -48,6 +49,10 @@ export function getHardhatUserConfig(): HardhatUserConfig {
           {
             privateKey: DEV_ACCOUNT_1_PRIVATE_KEY,
             balance: '1000000000000000000',
+          },
+          {
+            privateKey: DEV_ACCOUNT_2_PRIVATE_KEY,
+            balance: '100000000000000000000',
           },
         ],
       },

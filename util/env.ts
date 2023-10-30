@@ -9,6 +9,11 @@ export const HARDHAT_ACCOUNT_2 = process.env.HARDHAT_ACCOUNT_2 as string;
 export const DEV_ACCOUNT_1 = process.env.DEV_ACCOUNT_1 as string;
 export const DEV_ACCOUNT_1_PRIVATE_KEY = process.env.DEV_ACCOUNT_1_PRIVATE_KEY as string;
 
+// another utility account
+export const DEV_ACCOUNT_2 = (process.env.DEV_ACCOUNT_2 as string) ?? '';
+export const DEV_ACCOUNT_2_PRIVATE_KEY =
+  (process.env.DEV_ACCOUNT_2_PRIVATE_KEY as string) ?? '';
+
 export const HARDHAT_TOKEN_CONTRACT = process.env.HARDHAT_TOKEN_CONTRACT as string;
 export const HARDHAT_STAKING_CONTRACT = process.env.HARDHAT_STAKING_CONTRACT as string;
 export const HARDHAT_NETWORK_URL = process.env.HARDHAT_NETWORK_URL as string;
