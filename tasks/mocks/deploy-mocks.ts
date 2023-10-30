@@ -1,7 +1,6 @@
-import chalk from 'chalk';
 import { task } from 'hardhat/config';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { logSymbol } from '../../util';
+import { cliFormatInfo, cliFormatSuccess, logSymbol } from '../../util';
 import { mockTokenDefinitions } from './mock-token-definitions';
 
 task('deploy:mocks', 'Deploys mock ERC20 tokens')
@@ -22,7 +21,9 @@ task('deploy:mocks', 'Deploys mock ERC20 tokens')
 
       console.log(
         logSymbol.success,
-        chalk.green(`${tokenData.name} ${tokenData.symbol} deployed to:`, token.address),
+        cliFormatSuccess(
+          `${tokenData.name} ${tokenData.symbol} deployed to: ${token.address}`,
+        ),
       );
 
       await (hre as any).ethernal.push({
@@ -36,7 +37,7 @@ task('deploy:mocks', 'Deploys mock ERC20 tokens')
         await token.mint(taskArgs.account, hre.ethers.utils.parseEther('1000'));
         console.log(
           logSymbol.success,
-          `Minted 1000 ${await token.symbol()} to ${taskArgs.account}`,
+          cliFormatInfo(`Minted 1000 ${await token.symbol()} to ${taskArgs.account}`),
         );
       }
     }

@@ -31,6 +31,7 @@ export function getHardhatUserConfig(): HardhatUserConfig {
     defaultNetwork: 'localhost',
     networks: {
       hardhat: {
+        initialBaseFeePerGas: 0,
         mining: {
           auto: false,
           interval: 2000,

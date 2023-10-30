@@ -1,5 +1,7 @@
 export * from './bind-to-crescite';
 export * from './bind-to-staking';
+export * from './cli-format-info';
+export * from './cli-format-success';
 export * from './env';
 export * from './eth-address-to-xdc';
 export * from './format-ether';
