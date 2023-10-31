@@ -130,6 +130,10 @@ XINFIN_STAKING_CONTRACT=[address of latest staking contract version]
 
     hh node
 
+### Runnint tests over the local HardHat node
+
+    TS_NODE_PROJECT=./tsconfig.json HARDHAT_NETWORK=localhost ./node_modules/mocha/bin/_mocha --timeout 999999 --colors -r ts-node/register/transpile-only test/**/*.ts
+
 ## Ethernal
 
 [Ethernal](https://app.tryethernal.com) is a block explorer that can sync with the Hardhat node.

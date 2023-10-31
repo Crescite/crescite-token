@@ -5,7 +5,7 @@ import { logSymbol } from '../../util';
 
 task(
   'goldtoken:deploy',
-  'Deploys the Crescite contract',
+  'Deploys the GoldToken contract',
   async (taskArgs, hre: HardhatRuntimeEnvironment) => {
     console.log(chalk.bold('Deploying goldtoken to', hre.network.name));
 
