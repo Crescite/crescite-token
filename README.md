@@ -401,3 +401,10 @@ OPTIONS:
 
 revoke-role: Remove an account from a role
 ```
+
+
+## Gold Token
+
+### flattening contract
+
+    hh flatten contracts/GoldToken.sol > contracts-flattened/GoldToken.sol

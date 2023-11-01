@@ -49,9 +49,9 @@ describe('Crescite', () => {
 
   it('must only permit mint() calls from accounts with MINTER_ROLE role', async () => {
     const { token, otherAccount } = await loadFixture(deployFixtures);
-    expect(
+    await expect(
       token.connect(otherAccount).mint(otherAccount.address, 1000),
-    ).to.be.revertedWith('Fish');
+    ).to.be.revertedWith('AccessControl: account 0x70997970c51812dc3a010c7d01b50e0d17dc79c8 is missing role 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6');
   });
 
   it('must only permit pause() calls from accounts with PAUSER_ROLE role', async () => {
