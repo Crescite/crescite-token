@@ -46,6 +46,7 @@ export function getHardhatUserConfig(): HardhatUserConfig {
           auto: false,
           interval: 2000,
         },
+        chainId: 1337,
 
         // Simplify the Hardhat defaults (10 accounts not required)
         accounts: [
