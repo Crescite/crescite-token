@@ -31,7 +31,17 @@ export function getHardhatUserConfig(): HardhatUserConfig {
     defaultNetwork: 'localhost',
     networks: {
       hardhat: {
+        chainId: 1337,
+        // @see https://hardhat.org/hardhat-runner/docs/config#json-rpc-based-networks
+        // for into on gas configuration
+
+        // XDC gas fees:
+        // @see https://ruslanwing100.medium.com/how-to-use-xinfins-open-api-to-build-your-first-dapp-on-xdc-network-3d0b9a42586c
+
+        // 0.25 XDC in gwei
         initialBaseFeePerGas: 0,
+        gasPrice: 21000,
+        gas: 'auto',
         mining: {
           auto: false,
           interval: 2000,
