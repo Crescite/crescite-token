@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "node": "NODE_ENV=test hh node",
     "precompile": "npm run lint",
     "pretest": "npm run lint",
     "format:check": "prettier . ./contracts/**/*.sol --check",
